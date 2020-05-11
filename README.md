@@ -22,6 +22,12 @@ Training graphs and qualitative results
 $ pip install -r requirements.txt
 ```
 
+
+Setup python path to include repo
+```
+python setup.py develop
+```
+
 ## Usage
 1. Download the CelebA dataset and create train and test fold for the classifier. 
 
@@ -37,7 +43,7 @@ python train_classifier.py --config 'configs/celebA_DenseNet_Classifier.yaml'
 ```
 2.b. To train a binary classifier on 1 attribute
 ```
-python train_classifier.py --config 'configs/celebA_Smile_DenseNet_Classifier.yaml'
+python train_classifier.py --config 'configs/celebA_Smile_Classifier.yaml'
 ```
 3. Process the output of the classifier and create input for Explanation model by discretizing the posterior probability.
 The input data for the Explanation model is saved at: $log_dir$/$name$/explainer_input/
