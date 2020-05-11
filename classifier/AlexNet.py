@@ -1,5 +1,6 @@
 import tensorflow as tf
 
+
 def conv(x, filter_height, filter_width, num_filters, stride_y, stride_x, name,
          padding='SAME', groups=1):
     """Create a convolution layer.
@@ -17,7 +18,7 @@ def conv(x, filter_height, filter_width, num_filters, stride_y, stride_x, name,
         # Create tf variables for the weights and biases of the conv layer
         weights = tf.get_variable('weights', shape=[filter_height,
                                                     filter_width,
-                                                    input_channels/groups,
+                                                    input_channels / groups,
                                                     num_filters])
         biases = tf.get_variable('biases', shape=[num_filters])
 
@@ -42,6 +43,8 @@ def conv(x, filter_height, filter_width, num_filters, stride_y, stride_x, name,
     relu = tf.nn.relu(bias, name=scope.name)
 
     return relu
+
+
 def fc(x, num_in, num_out, name, relu=True):
     """Create a fully connected layer."""
     with tf.variable_scope(name) as scope:
@@ -60,22 +63,29 @@ def fc(x, num_in, num_out, name, relu=True):
         return relu
     else:
         return act
+
+
 def max_pool(x, filter_height, filter_width, stride_y, stride_x, name,
              padding='SAME'):
     """Create a max pooling layer."""
     return tf.nn.max_pool(x, ksize=[1, filter_height, filter_width, 1],
                           strides=[1, stride_y, stride_x, 1],
                           padding=padding, name=name)
+
+
 def lrn(x, radius, alpha, beta, name, bias=1.0):
     """Create a local response normalization layer."""
     return tf.nn.local_response_normalization(x, depth_radius=radius,
                                               alpha=alpha, beta=beta,
                                               bias=bias, name=name)
+
+
 def dropout(x, keep_prob):
     """Create a dropout layer."""
     return tf.nn.dropout(x, keep_prob)
 
-def pretrained_classifier(inputae, n_label, reuse=False,  name='classifier', isTrain = False, verbose=False):
+
+def pretrained_classifier(inputae, n_label, reuse=False, name='classifier', isTrain=False, verbose=False):
     if verbose:
         print("Classifier", isTrain)
     if isTrain == True:
@@ -122,10 +132,10 @@ def pretrained_classifier(inputae, n_label, reuse=False,  name='classifier', isT
         if verbose:
             print('pool5: ', pool5)
         # 6th Layer: Flatten -> FC (w ReLu) -> Dropout
-        flattened = tf.reshape(pool5, [-1, 4*4*256])
+        flattened = tf.reshape(pool5, [-1, 4 * 4 * 256])
         if verbose:
             print('flattened: ', flattened)
-        fc6 = fc(flattened, 4*4*256, 4096, name='fc6')
+        fc6 = fc(flattened, 4 * 4 * 256, 4096, name='fc6')
         dropout6 = dropout(fc6, DROPOUT_KEEP_PROB)
         if verbose:
             print('fc6: ', fc6)
@@ -136,12 +146,12 @@ def pretrained_classifier(inputae, n_label, reuse=False,  name='classifier', isT
             print('fc7: ', fc7)
         # 8th Layer: FC and return unscaled activations
         pred1 = fc(dropout7, 4096, n_label, relu=False, name='fc8')
-        #cnn_output = tf.nn.softmax(fc_layer_3)
-        #print("logit: ", pred)
+        # cnn_output = tf.nn.softmax(fc_layer_3)
+        # print("logit: ", pred)
         if isTrain == False:
             if verbose:
                 print(isTrain)
-            pred = tf.stop_gradient(pred1) 
-        #prediction = tf.nn.sigmoid(pred1)
-        #pred_y = tf.argmax(prediction, 1)
+            pred = tf.stop_gradient(pred1)
+            # prediction = tf.nn.sigmoid(pred1)
+        # pred_y = tf.argmax(prediction, 1)
         return pred1
