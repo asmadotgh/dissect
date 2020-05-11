@@ -3,3 +3,9 @@ startupjupyter
 .ipynb_checkpoints/
 *.zip
 *.npy
+.DS_Store
+.ipynb_checkpoints
+configs/*
+output/*
+data/*
+

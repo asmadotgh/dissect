@@ -1,8 +1,35 @@
+#### Docker settings: CUDA 9.0, V9.0.176; CudNN 7.2.1.38-1+cuda9.0
 pandas==0.23.4
-numpy==1.15.0
 PyYAML==3.13
-tensorboard==1.12.2
-tensorboardX==1.6
-tensorflow-gpu==1.12.3
 tqdm==4.31.1
 scipy==1.1.0
+tensorboardX==1.6
+
+
+#### Added libraries
+jupyterlab==2.1.2
+seaborn==0.9.1
+sklearn==0.0
+pillow==7.1.2
+
+
+#### Original git repo tensorflow version 1.12
+tensorboard==1.12.2
+tensorflow-gpu==1.12.3
+numpy==1.15.0
+
+
+#### Matlaber settings: CUDA 10.0, V10.0.130; cuDNN: 7.6.5.32-1+cuda10.2 or 7.6.2 depending on the machine
+#### Tensorflow 1.15
+# tensorboard==1.15.0
+# tensorflow-gpu==1.15.0
+# tensorflow==1.15.0
+# numpy==1.18.4
+# seaborn==0.10.1
+
+#### Tensorflow 1.14
+# tensorboard==1.14.0
+# tensorflow-gpu==1.14.0
+# tensorflow==1.14.0
+# numpy==1.16.4
+# seaborn==0.10.1
