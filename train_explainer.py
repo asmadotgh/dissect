@@ -210,8 +210,8 @@ def Train():
         np.random.shuffle(data)
         for i in range(data.shape[0] // BATCH_SIZE):
             image_paths = data[i * BATCH_SIZE:(i + 1) * BATCH_SIZE]
-            img, labels = load_images_and_labels(image_paths, '', 1, file_names_dict, input_size, channels,
-                                                 do_center_crop=True)
+            img, labels = load_images_and_labels(image_paths, config['image_dir'], 1, file_names_dict, input_size,
+                                                 channels, do_center_crop=True)
 
             labels = labels.ravel()
             labels = convert_ordinal_to_binary(labels, NUMS_CLASS)
@@ -232,8 +232,8 @@ def Train():
             counter += 1
 
             def save_results(sess, step):
-                img, labels = load_images_and_labels(image_paths[0:8], '', 1, file_names_dict, input_size, channels,
-                                                     do_center_crop=True)
+                img, labels = load_images_and_labels(image_paths[0:8], config['image_dir'], 1, file_names_dict,
+                                                     input_size, channels, do_center_crop=True)
                 labels = labels.ravel()
                 img_repeat = np.repeat(img, NUMS_CLASS, 0)
 
