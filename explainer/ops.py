@@ -12,7 +12,7 @@ def upsampling(inputs):
 
 
 def downsampling(inputs):
-    return tf.nn.avg_pool2d(inputs, [1, 2, 2, 1], [1, 2, 2, 1], "SAME")
+    return tf.nn.avg_pool(inputs, [1, 2, 2, 1], [1, 2, 2, 1], "SAME")
 
 
 def relu(inputs):
