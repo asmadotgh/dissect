@@ -9,4 +9,5 @@ configs/*
 output/*
 data/*
 *egg-info/
+.idea/
 
