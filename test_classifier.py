@@ -80,7 +80,6 @@ def test():
     if past_checkpoint is not None:
         ckpt = tf.train.get_checkpoint_state(past_checkpoint + '/')
         if ckpt and ckpt.model_checkpoint_path:
-            print("HERE...................lod checkpoint.........")
             print(str(ckpt.model_checkpoint_path))
             saver.restore(sess, tf.train.latest_checkpoint(past_checkpoint + '/'))
         else:
