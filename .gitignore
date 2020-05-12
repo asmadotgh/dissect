@@ -4,8 +4,9 @@ startupjupyter
 *.zip
 *.npy
 .DS_Store
-*/.ipynb_checkpoints
+.ipynb_checkpoints
 configs/*
 output/*
 data/*
+*egg-info/
 
