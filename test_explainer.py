@@ -30,7 +30,7 @@ def convert_ordinal_to_binary(y, n):
     return new_y
 
 
-def Train():
+def test():
     parser = argparse.ArgumentParser()
     parser.add_argument(
         '--config', '-c', default='configs/celebA_Young_Explainer.yaml')
@@ -210,4 +210,4 @@ def Train():
 
 
 if __name__ == "__main__":
-    Train()
+    test()
