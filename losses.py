@@ -71,3 +71,9 @@ def discriminator_loss(loss_func, real, fake):
     loss = real_loss + fake_loss
 
     return loss
+
+
+def contrastive_regularizer_loss(logits, labels, loss_func='sigmoid_cross_entropy'):
+    if loss_func == 'sigmoid_cross_entropy':
+        loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(labels=labels, logits=logits))
+    return loss

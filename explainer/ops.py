@@ -207,3 +207,19 @@ def D_FirstResblock(name, inputs, nums_out, update_collection, is_down=True, is_
             temp = downsampling(temp)
             temp = conv("identity", temp, nums_out, 1, 1, update_collection=update_collection, is_sn=is_sn)
     return inputs + temp
+
+
+def batch_norm_layer(x, is_training, name='batch_norm'):
+    return tf.contrib.layers.batch_norm(x, decay=0.9, updates_collections=None, epsilon=1e-5, scale=True,
+                                        is_training=is_training, scope=name)
+
+
+def dense_layer(x, layer_size, isTrain, scope, dropout_p=0.8):
+    with tf.name_scope(scope):
+        x = batch_norm_layer(x, is_training=isTrain, name=scope + '_batch')
+        # print("bn: ", x)
+        x = tf.nn.relu(x)
+        x = tf.layers.dense(x, layer_size, name=scope + '_dense')
+        x = tf.layers.dropout(x, dropout_p, isTrain)
+        # print("dense: ", x)
+        return x
