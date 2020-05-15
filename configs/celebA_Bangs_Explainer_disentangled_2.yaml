@@ -1,14 +1,15 @@
 ###########
 # Explainer #
 ###########
+
 # number of disentangled knobs
-k_dim: 1
-lambda_r: 0.0
+k_dim: 2
+lambda_r: 1.0
 
 image_label_dict: './output/classifier/CelebA-Bangs/explainer_input/list_attr_celeba_Bangs.txt' #path where the training data as [image name, label] is saved. Here label is the bin-index. Refer ../notebooks/Process_Classifier_Output.ipynb to see how to create this file from the classifier results.
 cls_experiment: './output/classifier/CelebA-Bangs' #address where classifier checkpoint is saved
 log_dir: './output/explainer' #address where explainer checkpoint and summaries will be saved
-name: 'CelebA-Bangs-Binary' #name of the folder at the above address
+name: 'CelebA-Bangs-Binary-Disentangled_2' #name of the folder at the above address
 
 num_channel: 3
 num_class: 2
@@ -28,7 +29,7 @@ lambda_cls: 1
 save_summary: 20
 # Save sample images after every how many iterations.
 
-ckpt_dir_continue: './output/explainer/CelebA-Bangs-Binary'
+ckpt_dir_continue: './output/explainer/CelebA-Bangs-Binary-Disentangled_2'
 
-count_to_save: 100
+count_to_save: 20
 # number of samples to save while testing
