@@ -69,7 +69,7 @@ def test():
     except:
         print("Problem in reading input data file : ", config['image_label_dict'])
         sys.exit()
-    data = np.asarray(file_names_dict.keys())
+    data = np.asarray(list(file_names_dict.keys()))
     print("The classification categories are: ")
     print(categories)
     print('The size of the training set: ', data.shape[0])
@@ -149,7 +149,7 @@ def test():
     data = data[0:count_to_save]
     for i in range(data.shape[0] // BATCH_SIZE):
         image_paths = data[i * BATCH_SIZE:(i + 1) * BATCH_SIZE]
-        img, labels = load_images_and_labels(image_paths, '', 1, file_names_dict, input_size, channels,
+        img, labels = load_images_and_labels(image_paths, config['image_dir'], 1, file_names_dict, input_size, channels,
                                              do_center_crop=True)
         img_repeat = np.repeat(img, NUMS_CLASS, 0)
 
