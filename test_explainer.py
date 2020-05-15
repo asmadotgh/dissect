@@ -29,7 +29,7 @@ def convert_ordinal_to_binary(y, n):
             new_y[i, j] = 1
     return new_y
 
-
+# TODO add support for disentangler
 def test():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -62,6 +62,9 @@ def test():
     lambda_cls = config['lambda_cls']
     save_summary = int(config['save_summary'])
     ckpt_dir_continue = ckpt_dir
+    k_dim = config['k_dim']
+    lambda_r = config['lambda_r']
+    disentangle = k_dim > 1
     count_to_save = config['count_to_save']
     # ============= Data =============
     try:
@@ -75,23 +78,37 @@ def test():
     print('The size of the training set: ', data.shape[0])
 
     # ============= placeholder =============
-    x_source = tf.placeholder(tf.float32, [None, input_size, input_size, channels])
-    y_s = tf.placeholder(tf.int32, [None, NUMS_CLASS])
+    x_source = tf.placeholder(tf.float32, [None, input_size, input_size, channels], name='x_source')
+    y_s = tf.placeholder(tf.int32, [None, NUMS_CLASS], name='y_s')
     y_source = y_s[:, 0]
-    train_phase = tf.placeholder(tf.bool)
+    train_phase = tf.placeholder(tf.bool, name='train_phase')
 
-    y_t = tf.placeholder(tf.int32, [None, NUMS_CLASS])
+    y_t = tf.placeholder(tf.int32, [None, NUMS_CLASS], name='y_t')
     y_target = y_t[:, 0]
 
-    # ============= G & D =============    
+    if disentangle:
+        y_regularizer = tf.placeholder(tf.int32, [None], name='y_regularizer')
+        y_r = tf.placeholder(tf.float32, [None, k_dim], name='y_r')
+        y_r_0 = tf.zeros_like(y_r, name='y_r_0')
+
+    # ============= G & D =============
     G = Generator_Encoder_Decoder("generator")  # with conditional BN, SAGAN: SN here as well
     D = Discriminator_Ordinal("discriminator")  # with SN and projection
 
+    # TODO AG, currently D only conditions on delta, but not the "knob" index.
     real_source_logits = D(x_source, y_s, NUMS_CLASS, "NO_OPS")
-
-    fake_target_img, fake_target_img_embedding = G(x_source, train_phase, y_target, NUMS_CLASS)
-    fake_source_img, fake_source_img_embedding = G(fake_target_img, train_phase, y_source, NUMS_CLASS)
-    fake_source_recons_img, x_source_img_embedding = G(x_source, train_phase, y_source, NUMS_CLASS)
+    # TODO AG, currently G conditions on a one-hot vector of size NUMS_CLASS * k_dim. Make it more efficient?
+    if disentangle:
+        fake_target_img, fake_target_img_embedding = G(x_source, train_phase,
+                                                       y_regularizer * NUMS_CLASS + y_target, NUMS_CLASS * k_dim)
+        fake_source_img, fake_source_img_embedding = G(fake_target_img, train_phase,
+                                                       y_regularizer * NUMS_CLASS + y_source, NUMS_CLASS * k_dim)
+        fake_source_recons_img, x_source_img_embedding = G(x_source, train_phase,
+                                                           y_regularizer * NUMS_CLASS + y_source, NUMS_CLASS * k_dim)
+    else:
+        fake_target_img, fake_target_img_embedding = G(x_source, train_phase, y_target, NUMS_CLASS)
+        fake_source_img, fake_source_img_embedding = G(fake_target_img, train_phase, y_source, NUMS_CLASS)
+        fake_source_recons_img, x_source_img_embedding = G(x_source, train_phase, y_source, NUMS_CLASS)
     fake_target_logits = D(fake_target_img, y_t, NUMS_CLASS, None)
 
     # ============= pre-trained classifier =============      
@@ -144,27 +161,39 @@ def test():
     names = np.empty([0])
 
     np.random.shuffle(data)
-    np.random.shuffle(data)
-    np.random.shuffle(data)
     data = data[0:count_to_save]
     for i in range(data.shape[0] // BATCH_SIZE):
         image_paths = data[i * BATCH_SIZE:(i + 1) * BATCH_SIZE]
         img, labels = load_images_and_labels(image_paths, config['image_dir'], 1, file_names_dict, input_size, channels,
                                              do_center_crop=True)
-        img_repeat = np.repeat(img, NUMS_CLASS, 0)
-
+        labels = np.repeat(labels, NUMS_CLASS * k_dim, 0)
         labels = labels.ravel()
-        labels = np.repeat(labels, NUMS_CLASS, 0)
-        source_labels = convert_ordinal_to_binary(labels, NUMS_CLASS)
+        labels = convert_ordinal_to_binary(labels, NUMS_CLASS)
+        img_repeat = np.repeat(img, NUMS_CLASS * k_dim, 0)
 
-        target_labels = np.asarray([np.asarray(range(NUMS_CLASS)) for j in range(img.shape[0])])
+        target_labels = np.asarray([np.asarray(range(NUMS_CLASS)) for j in range(BATCH_SIZE * k_dim)])
         target_labels = target_labels.ravel()
+        identity_ind = labels == target_labels
         target_labels = convert_ordinal_to_binary(target_labels, NUMS_CLASS)
+
+        if disentangle:
+            target_disentangle_ind = np.asarray(
+                [np.repeat(np.asarray(range(k_dim)), NUMS_CLASS) for j in range(BATCH_SIZE)])
+            target_disentangle_ind = target_disentangle_ind.ravel()
+            target_disentangle_ind_one_hot = np.eye(k_dim)[target_disentangle_ind]
+            target_disentangle_ind_one_hot[identity_ind, :] = 0
+            my_feed_dict = {y_t: target_labels, x_source: img_repeat, train_phase: False,
+                            y_s: labels,
+                            y_regularizer: target_disentangle_ind, y_r: target_disentangle_ind_one_hot}
+        else:
+            my_feed_dict = {y_t: target_labels, x_source: img_repeat, train_phase: False,
+                            y_s: labels}
 
         FAKE_IMG, f_embed, recons_img, real_p, fake_p, recons_p, s_embed = sess.run(
             [fake_target_img, fake_target_img_embedding, fake_source_img, real_img_cls_prediction,
              fake_img_cls_prediction, real_img_recons_cls_prediction, x_source_img_embedding],
-            feed_dict={y_t: target_labels, x_source: img_repeat, train_phase: False, y_s: source_labels})
+            feed_dict=my_feed_dict)
+
         if i == 0:
             real_img = img
             fake_images = FAKE_IMG
