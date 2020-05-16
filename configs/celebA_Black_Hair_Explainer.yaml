@@ -1,10 +1,13 @@
 ###########
 # Explainer #
 ###########
+
+dataset: 'CelebA'
 # number of disentangled knobs
 k_dim: 1
 lambda_r: 0.0
 
+image_dir: './data/CelebA/images/'
 image_label_dict: './output/classifier/CelebA-Black_Hair/explainer_input/list_attr_celeba_Black_Hair.txt' #path where the training data as [image name, label] is saved. Here label is the bin-index. Refer ../notebooks/Process_Classifier_Output.ipynb to see how to create this file from the classifier results.
 cls_experiment: './output/classifier/CelebA-Black_Hair' #address where classifier checkpoint is saved
 log_dir: './output/explainer' #address where explainer checkpoint and summaries will be saved

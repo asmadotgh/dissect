@@ -2,6 +2,7 @@
 # Explainer #
 ###########
 
+dataset: 'CelebA'
 # number of disentangled knobs
 k_dim: 1
 lambda_r: 0.0

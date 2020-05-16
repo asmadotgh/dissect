@@ -2,6 +2,7 @@
 # Classifier #
 ###########
 
+dataset: 'CelebA'
 image_dir: './data/CelebA/images/'
 image_label_dict: './data/CelebA/Heavy_Makeup_binary_classification.txt'
 train: './data/CelebA/train_ids.npy'
