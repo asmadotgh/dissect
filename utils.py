@@ -75,13 +75,13 @@ def make3d(img, num_channel, image_size, row, col):
     # img.shape = [row*col, h, w, c]
     # final: [row*h, col*w, c]
     if num_channel > 1:
-        img = np.reshape(img, [col, row, image_size, image_size, num_channel])  # [col, row, h, w, c]
+        img = np.reshape(img, [row, col, image_size, image_size, num_channel])  # [row, col, h, w, c]
     else:
-        img = np.reshape(img, [col, row, image_size, image_size])  # [col, row, h, w]
-    img = unstack(img, axis=0)  # col * [row, h, w, c]
-    img = np.concatenate(img, axis=2)  # [row, h, col*w, c]
-    img = unstack(img, axis=0)  # row * [h, col*w, c]
-    img = np.concatenate(img, axis=0)  # [row*h, col*w, c]
+        img = np.reshape(img, [row, col, image_size, image_size])  # [row, col, h, w]
+    img = unstack(img, axis=0)  # row * [col, h, w, c]
+    img = np.concatenate(img, axis=1)  # [col, row*h, w, c]
+    img = unstack(img, axis=0)  # col * [row*h, w, c]
+    img = np.concatenate(img, axis=1)  # [row*h, col*w, c]
     return img
 
 
@@ -91,10 +91,9 @@ def unstack(img, axis):
     return arr
 
 
-def save_images(realA, realB, fakeB, cycA, sample_file, image_size=128, num_channel=3):
-    img = np.concatenate((realA[:5, :, :, :], fakeB[:5, :, :, :], cycA[:5, :, :, :], realB[:5, :, :, :],
-                          realA[5:, :, :, :], fakeB[5:, :, :, :], cycA[5:, :, :, :], realB[5:, :, :, :]), axis=0)
-
-    img = make3d(img, num_channel=num_channel, image_size=image_size, row=5, col=8)
+def save_images(img, sample_file, num_samples, nums_class, k_dim=1, image_size=128, num_channel=3):
+    n_rows = num_samples * k_dim
+    n_cols = nums_class
+    img = make3d(img, num_channel=num_channel, image_size=image_size, row=n_rows, col=n_cols)
     img = inverse_image(img)
     scm.imsave(sample_file, img)
