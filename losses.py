@@ -70,10 +70,21 @@ def discriminator_loss(loss_func, real, fake):
 
     loss = real_loss + fake_loss
 
-    return loss
+    tp = tf.reduce_sum(tf.math.round(tf.nn.sigmoid(real)))
+    fn = tf.cast(tf.shape(real)[0], dtype=tf.float32) - tp
+    fp = tf.reduce_sum(tf.math.round(tf.nn.sigmoid(fake)))
+    tn = tf.cast(tf.shape(fake)[0], dtype=tf.float32) - fp
+    acc = (tp + tn) / (tp + tn + fp + fn) * 100.0
+    precision = tp / (tp + fp) * 100.0
+    recall = tp / (tp + fn) * 100.0
+    return loss, acc, precision, recall
 
 
 def contrastive_regularizer_loss(logits, labels, loss_func='sigmoid_cross_entropy'):
     if loss_func == 'sigmoid_cross_entropy':
         loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(labels=labels, logits=logits))
-    return loss
+
+    acc = tf.reduce_mean(tf.cast(
+        tf.equal(tf.reduce_sum(tf.cast(tf.equal(tf.math.round(tf.nn.sigmoid(logits)), labels), dtype=tf.int32), axis=1),
+                 tf.shape(labels)[1]), tf.float32)) * 100.0
+    return loss, acc
