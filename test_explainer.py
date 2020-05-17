@@ -29,7 +29,7 @@ def convert_ordinal_to_binary(y, n):
             new_y[i, j] = 1
     return new_y
 
-# TODO add support for disentangler
+
 def test():
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -126,7 +126,6 @@ def test():
     saver = tf.train.Saver()
 
     # ============= Checkpoints =============
-    print(" [*] before training, Load checkpoint ")
     print(" [*] Reading checkpoint...")
 
     ckpt = tf.train.get_checkpoint_state(ckpt_dir_continue)
