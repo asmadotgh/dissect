@@ -5,7 +5,8 @@ import os
 import pdb
 import yaml
 import tensorflow as tf
-from classifier.DenseNet import pretrained_classifier
+from classifier.DenseNet import pretrained_classifier as celeba_classifier
+from classifier.SimpleNet import pretrained_classifier as dsprites_classifier
 from utils import read_data_file, load_images_and_labels
 import argparse
 import warnings
@@ -41,6 +42,11 @@ def train():
     input_size = config['input_size']
     N_CLASSES = config['num_class']
     ckpt_dir_continue = config['ckpt_dir_continue']
+    dataset = config['dataset']
+    if dataset == 'CelebA':
+        pretrained_classifier = celeba_classifier
+    elif dataset == 'dsprites':
+        pretrained_classifier = dsprites_classifier
     if ckpt_dir_continue == '':
         continue_train = False
     else:
