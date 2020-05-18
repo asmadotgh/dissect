@@ -8,6 +8,7 @@ import tensorflow as tf
 from classifier.DenseNet import pretrained_classifier as celeba_classifier
 from classifier.SimpleNet import pretrained_classifier as shapes_classifier
 from data_loader.data_loader import CelebALoader, ShapesLoader
+from utils import read_data_file
 import argparse
 import warnings
 
@@ -37,13 +38,20 @@ def test(config):
     dataset = config['dataset']
     if dataset == 'CelebA':
         pretrained_classifier = celeba_classifier
-        my_data_loader = CelebALoader(config['image_label_dict'])
+        my_data_loader = CelebALoader()
     elif dataset == 'shapes':
         pretrained_classifier = shapes_classifier
         my_data_loader = ShapesLoader()
     # ============= Data =============
+    try:
+        categories, file_names_dict = read_data_file(config['image_label_dict'])
+    except:
+        print("Problem in reading input data file : ", config['image_label_dict'])
+        sys.exit()
     data_train = np.load(config['train'])
     data_test = np.load(config['test'])
+    print("The classification categories are: ")
+    print(categories)
     print('The size of the training set: ', data_train.shape[0])
     print('The size of the testing set: ', data_test.shape[0])
 
@@ -52,7 +60,7 @@ def test(config):
         x_ = tf.placeholder(tf.float32, [None, input_size, input_size, channels], name='x-input')
         y_ = tf.placeholder(tf.int64, [None, N_CLASSES], name='y-input')
         isTrain = tf.placeholder(tf.bool)
-        # ============= Model =============
+    # ============= Model =============
 
     if N_CLASSES == 1:
         y = tf.reshape(y_, [-1])
@@ -95,8 +103,8 @@ def test(config):
             start = i * BATCH_SIZE
             ns = data_train[start:start + BATCH_SIZE]
             xs, ys = my_data_loader.load_images_and_labels(ns, image_dir=config['image_dir'], n_class=N_CLASSES,
-                                                           input_size=input_size, num_channel=channels,
-                                                           do_center_crop=True)
+                                                           file_names_dict=file_names_dict, input_size=input_size,
+                                                           num_channel=channels, do_center_crop=True)
             [_pred] = sess.run([prediction], feed_dict={x_: xs, isTrain: False, y_: ys})
             if i == 0:
                 names = np.asarray(ns)

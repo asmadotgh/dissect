@@ -10,7 +10,7 @@ from classifier.SimpleNet import pretrained_classifier as shapes_classifier
 import argparse
 import warnings
 from data_loader.data_loader import CelebALoader, ShapesLoader
-from utils import calc_accuracy
+from utils import calc_accuracy, read_data_file
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 warnings.filterwarnings("ignore")
@@ -46,7 +46,7 @@ def train():
     dataset = config['dataset']
     if dataset == 'CelebA':
         pretrained_classifier = celeba_classifier
-        my_data_loader = CelebALoader(config['image_label_dict'])
+        my_data_loader = CelebALoader()
     elif dataset == 'shapes':
         pretrained_classifier = shapes_classifier
         my_data_loader = ShapesLoader()
@@ -55,9 +55,15 @@ def train():
     else:
         continue_train = True
     # ============= Data =============
+    try:
+        categories, file_names_dict = read_data_file(config['image_label_dict'])
+    except:
+        print("Problem in reading input data file : ", config['image_label_dict'])
+        sys.exit()
     data_train = np.load(config['train'])
     data_test = np.load(config['test'])
-
+    print("The classification categories are: ")
+    print(categories)
     print('The size of the training set: ', data_train.shape[0])
     print('The size of the testing set: ', data_test.shape[0])
     fp = open(os.path.join(output_dir, 'setting.txt'), 'w')
@@ -126,8 +132,8 @@ def train():
             start = i * BATCH_SIZE
             ns = data_train[start:start + BATCH_SIZE]
             xs, ys = my_data_loader.load_images_and_labels(ns, image_dir=config['image_dir'], n_class=N_CLASSES,
-                                                           input_size=input_size, num_channel=channels,
-                                                           do_center_crop=True)
+                                                           file_names_dict=file_names_dict, input_size=input_size,
+                                                           num_channel=channels, do_center_crop=True)
             [_, _loss, summary_str] = sess.run([train_step, loss, sum_train], feed_dict={x_: xs, isTrain: True, y_: ys})
             writer.add_summary(summary_str, itr_train)
             itr_train += 1
@@ -144,8 +150,9 @@ def train():
         for i in range(0, num_batch):
             start = i * BATCH_SIZE
             ns = data_test[start:start + BATCH_SIZE]
-            xs, ys = my_data_loader.load_images_and_labels(ns, config['image_dir'], N_CLASSES, input_size, channels,
-                                                           do_center_crop=True)
+            xs, ys = my_data_loader.load_images_and_labels(ns, image_dir=config['image_dir'], n_class=N_CLASSES,
+                                                           file_names_dict=file_names_dict, input_size=input_size,
+                                                           num_channel=channels, do_center_crop=True)
             [_loss, summary_str] = sess.run([loss, sum_train], feed_dict={x_: xs, isTrain: False, y_: ys})
             writer_test.add_summary(summary_str, itr_test)
             itr_test += 1
