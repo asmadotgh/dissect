@@ -151,7 +151,7 @@ def train():
                                                                                                  reuse=True)
 
     # ============= pre-trained classifier loss =============
-    real_p = tf.cast(y_target, tf.float32) * 0.1
+    real_p = tf.cast(y_target, tf.float32) * 1.0/float(NUMS_CLASS)
     fake_q = fake_img_cls_prediction[:, target_class]
     fake_evaluation = (real_p * tf.math.log(fake_q)) + ((1 - real_p) * tf.math.log(1 - fake_q))
     fake_evaluation = -tf.reduce_mean(fake_evaluation)
@@ -182,7 +182,8 @@ def train():
     if disentangle:
         R_fake_target_loss, R_fake_target_acc = contrastive_regularizer_loss(regularizer_fake_target_logits, y_r)
         R_fake_source_loss, R_fake_source_acc = contrastive_regularizer_loss(regularizer_fake_source_logits, y_r)
-        R_fake_source_recon_loss, R_fake_source_recon_acc = contrastive_regularizer_loss(regularizer_fake_source_recon_logits, y_r_0)
+        R_fake_source_recon_loss, R_fake_source_recon_acc = contrastive_regularizer_loss(
+            regularizer_fake_source_recon_logits, y_r_0)
         R_loss = R_fake_target_loss + R_fake_source_loss + R_fake_source_recon_loss
         G_loss = (G_loss_GAN * lambda_GAN) + (G_loss_rec * lambda_cyc) + (G_loss_cyc * lambda_cyc) + (
                 fake_evaluation * lambda_cls) + (recons_evaluation * lambda_cls) + R_loss * lambda_r
@@ -197,11 +198,13 @@ def train():
     fake_img_sum = tf.summary.image('fake_target_img', fake_target_img)
     fake_source_img_sum = tf.summary.image('fake_source_img', fake_source_img)
     fake_source_recons_img_sum = tf.summary.image('fake_source_recons_img', fake_source_recons_img)
+
     acc_d = tf.summary.scalar('discriminator/acc_d', D_acc)
     precision_d = tf.summary.scalar('discriminator/precision_d', D_precision)
     recall_d = tf.summary.scalar('discriminator/recall_d', D_recall)
     loss_d_sum = tf.summary.scalar('discriminator/loss_d', D_loss)
     loss_d_GAN_sum = tf.summary.scalar('discriminator/loss_d_GAN', D_loss_GAN)
+
     loss_g_sum = tf.summary.scalar('generator/loss_g', G_loss)
     loss_g_GAN_sum = tf.summary.scalar('generator/loss_g_GAN', G_loss_GAN)
     loss_g_cyc_sum = tf.summary.scalar('generator/G_loss_cyc', G_loss_cyc)
