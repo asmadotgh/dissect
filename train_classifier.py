@@ -6,10 +6,11 @@ import pdb
 import yaml
 import tensorflow as tf
 from classifier.DenseNet import pretrained_classifier as celeba_classifier
-from classifier.SimpleNet import pretrained_classifier as dsprites_classifier
-from utils import read_data_file, load_images_and_labels
+from classifier.SimpleNet import pretrained_classifier as shapes_classifier
 import argparse
 import warnings
+from data_loader.data_loader import CelebALoader, ShapesLoader
+from utils import calc_accuracy, calc_accuracy_with_logits
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 warnings.filterwarnings("ignore")
@@ -45,22 +46,18 @@ def train():
     dataset = config['dataset']
     if dataset == 'CelebA':
         pretrained_classifier = celeba_classifier
-    elif dataset == 'dsprites':
-        pretrained_classifier = dsprites_classifier
+        my_data_loader = CelebALoader(config['image_label_dict'])
+    elif dataset == 'shapes':
+        pretrained_classifier = shapes_classifier
+        my_data_loader = ShapesLoader()
     if ckpt_dir_continue == '':
         continue_train = False
     else:
         continue_train = True
     # ============= Data =============
-    try:
-        categories, file_names_dict = read_data_file(config['image_label_dict'])
-    except:
-        print("Problem in reading input data file : ", config['image_label_dict'])
-        sys.exit()
     data_train = np.load(config['train'])
     data_test = np.load(config['test'])
-    print("The classification categories are: ")
-    print(categories)
+
     print('The size of the training set: ', data_train.shape[0])
     print('The size of the testing set: ', data_test.shape[0])
     fp = open(os.path.join(output_dir, 'setting.txt'), 'w')
@@ -81,13 +78,15 @@ def train():
                                                   isTrain=isTrain)
         y = y_
     classif_loss = tf.losses.sigmoid_cross_entropy(multi_class_labels=y, logits=logit)
+    classif_acc = calc_accuracy(prediction=prediction, labels=y)
     loss = tf.losses.get_total_loss()
     # ============= Optimization functions =============    
     train_step = tf.train.AdamOptimizer(0.0001).minimize(loss)
     # ============= summary =============    
     cls_loss = tf.summary.scalar('classif_loss', classif_loss)
     total_loss = tf.summary.scalar('total_loss', loss)
-    sum_train = tf.summary.merge([cls_loss, total_loss])
+    cls_acc = tf.summary.scalar('classif_acc', classif_acc)
+    sum_train = tf.summary.merge([cls_loss, total_loss, cls_acc])
     # ============= Variables =============
     # Note that this list of variables only include the weights and biases in the model.
     lst_vars = []
@@ -126,9 +125,10 @@ def train():
         for i in range(0, num_batch):
             start = i * BATCH_SIZE
             ns = data_train[start:start + BATCH_SIZE]
-            xs, ys = load_images_and_labels(ns, config['image_dir'], N_CLASSES, file_names_dict, input_size, channels,
-                                            do_center_crop=True)
-            [_, _loss, summary_str] = sess.run([train_step, loss, sum_train], feed_dict={x_: xs, isTrain: True, y_: ys}) # sess.run([classif_loss], feed_dict={x_: xs, isTrain: True, y_: ys})
+            xs, ys = my_data_loader.load_images_and_labels(ns, image_dir=config['image_dir'], n_class=N_CLASSES,
+                                                           input_size=input_size, num_channel=channels,
+                                                           do_center_crop=True)
+            [_, _loss, summary_str] = sess.run([train_step, loss, sum_train], feed_dict={x_: xs, isTrain: True, y_: ys})
             writer.add_summary(summary_str, itr_train)
             itr_train += 1
             total_loss += _loss
@@ -144,8 +144,8 @@ def train():
         for i in range(0, num_batch):
             start = i * BATCH_SIZE
             ns = data_test[start:start + BATCH_SIZE]
-            xs, ys = load_images_and_labels(ns, config['image_dir'], N_CLASSES, file_names_dict, input_size, channels,
-                                            do_center_crop=True)
+            xs, ys = my_data_loader.load_images_and_labels(ns, config['image_dir'], N_CLASSES, input_size, channels,
+                                                           do_center_crop=True)
             [_loss, summary_str] = sess.run([loss, sum_train], feed_dict={x_: xs, isTrain: False, y_: ys})
             writer_test.add_summary(summary_str, itr_test)
             itr_test += 1
