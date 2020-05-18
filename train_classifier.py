@@ -10,7 +10,7 @@ from classifier.SimpleNet import pretrained_classifier as shapes_classifier
 import argparse
 import warnings
 from data_loader.data_loader import CelebALoader, ShapesLoader
-from utils import calc_accuracy, calc_accuracy_with_logits
+from utils import calc_accuracy
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 warnings.filterwarnings("ignore")
