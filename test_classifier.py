@@ -113,7 +113,6 @@ def test(config):
 
     train_names, train_prediction_y, train_true_y = get_predictions(data_train, 'train')
     test_names, test_prediction_y, test_true_y = get_predictions(data_test, 'test')
-    pdb.set_trace()
 
     return train_names, train_prediction_y, train_true_y, test_names, test_prediction_y, test_true_y, config
 
