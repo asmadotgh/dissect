@@ -124,6 +124,6 @@ def prep_shapes():
     dataset_split(all_images, shapes_dir)
 
 
-# if __name__ == "__main__":
-    # prep_shapes()
-    # prep_celeba()
+if __name__ == "__main__":
+    prep_shapes()
+    prep_celeba()
