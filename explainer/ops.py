@@ -80,11 +80,12 @@ def spectral_normalization(name, weights, num_iters=1, update_collection=None,
         return w_bar
 
 
+# TODO AG different way of doing this?
 def conditional_batchnorm(x, train_phase, scope_bn, y=None, nums_class=None):
     # Batch Normalization
     # Ioffe S, Szegedy C. Batch normalization: accelerating deep network training by reducing internal covariate shift[J]. 2015:448-456.
     with tf.variable_scope(scope_bn):
-        if y == None:
+        if y is None:
             beta = tf.get_variable(name=scope_bn + 'beta', shape=[x.shape[-1]],
                                    initializer=tf.constant_initializer([0.]), trainable=True)  # label_nums x C
             gamma = tf.get_variable(name=scope_bn + 'gamma', shape=[x.shape[-1]],

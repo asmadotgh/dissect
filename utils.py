@@ -7,6 +7,7 @@ import pdb
 import os
 from glob import glob
 from collections import namedtuple
+import tensorflow as tf
 
 
 def crop_center(img, cropx, cropy):
@@ -97,3 +98,14 @@ def save_images(img, sample_file, num_samples, nums_class, k_dim=1, image_size=1
     img = make3d(img, num_channel=num_channel, image_size=image_size, row=n_rows, col=n_cols)
     img = inverse_image(img)
     scm.imsave(sample_file, img)
+
+
+def calc_accuracy(prediction, labels):
+    acc = tf.reduce_mean(tf.cast(
+        tf.equal(tf.reduce_sum(tf.cast(tf.equal(tf.math.round(prediction), labels), dtype=tf.int32), axis=1),
+                 tf.shape(labels)[1]), tf.float32)) * 100.0
+    return acc
+
+
+def calc_accuracy_with_logits(logits, labels):
+    return calc_accuracy(tf.nn.sigmoid(logits), labels)

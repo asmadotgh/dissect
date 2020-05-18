@@ -1,4 +1,5 @@
 import tensorflow as tf
+from utils import calc_accuracy_with_logits
 import pdb
 
 
@@ -84,7 +85,5 @@ def contrastive_regularizer_loss(logits, labels, loss_func='sigmoid_cross_entrop
     if loss_func == 'sigmoid_cross_entropy':
         loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(labels=labels, logits=logits))
 
-    acc = tf.reduce_mean(tf.cast(
-        tf.equal(tf.reduce_sum(tf.cast(tf.equal(tf.math.round(tf.nn.sigmoid(logits)), labels), dtype=tf.int32), axis=1),
-                 tf.shape(labels)[1]), tf.float32)) * 100.0
+    acc = calc_accuracy_with_logits(logits, labels)
     return loss, acc
