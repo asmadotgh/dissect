@@ -22,7 +22,7 @@ def dense_layer(x, layer_size, isTrain, scope, dropout_p=0.8):
         return x
 
 
-def pretrained_classifier(inputae, n_label, reuse, name='SimpleClassifier', isTrain=False):
+def pretrained_classifier(inputae, n_label, reuse, name='classifier', isTrain=False):
     print(name, isTrain)
     with tf.variable_scope(name) as scope:
         if reuse:
