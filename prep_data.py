@@ -32,15 +32,11 @@ def find_attribute_index(categories, attribute):
     return index_main
 
 
-# Write the label file for target attribute binary classification
-def write_attribute_label_file(df, categories, attribute, output_dir):
-    index_main = find_attribute_index(categories, attribute)
-    # Train File
-    df_temp = df[['Image_Path'] + index_main]
+def save_processed_label_file(df, output_dir, attribute):
     file_name = ''.join(attribute) + '_binary_classification.txt'
-    df_temp.to_csv(os.path.join(output_dir, file_name), sep=' ', index=None, header=None)
-    print(df_temp.shape)
-    one_line = str(df_temp.shape[0]) + '\n'
+    df.to_csv(os.path.join(output_dir, file_name), sep=' ', index=None, header=None)
+    print(df.shape)
+    one_line = str(df.shape[0]) + '\n'
     second_line = ''.join(attribute) + "\n"
     with open(os.path.join(output_dir, file_name), 'r+') as fp:
         lines = fp.readlines()  # lines is list of line, each element '...\n'
@@ -48,6 +44,14 @@ def write_attribute_label_file(df, categories, attribute, output_dir):
         lines.insert(1, second_line)
         fp.seek(0)  # file pointer locates at the beginning to write the whole file again
         fp.writelines(lines)
+
+
+# Write the label file for target attribute binary classification
+def write_attribute_label_file(df, categories, attribute, output_dir):
+    index_main = find_attribute_index(categories, attribute)
+    # Train File
+    df_temp = df[['Image_Path'] + index_main]
+    save_processed_label_file(df_temp, output_dir, attribute)
 
 
 # Read saved files
@@ -112,6 +116,7 @@ def prep_shapes():
     # image_shape = images.shape[1:]  # [64, 64, 3]
     # label_shape = labels.shape[1:]  # [6]
     n_samples = attributes.shape[0]  # 10 * 10 * 10 * 8 * 4 * 15 = 480000
+    labels = ((attributes[:, 0] == attributes[:, 1]) & (attributes[:, 0] == attributes[:, 2])).astype(np.int32)
 
     # _FACTORS_IN_ORDER = ['floor_hue', 'wall_hue', 'object_hue', 'scale', 'shape',
     #                      'orientation']
@@ -120,8 +125,10 @@ def prep_shapes():
 
     # Divide dataset into train and test set
     all_images = np.arange(n_samples)
-
     dataset_split(all_images, shapes_dir)
+    shape_labels_df = pd.DataFrame(data={'filenames': all_images, 'samecolor': labels})
+
+    save_processed_label_file(shape_labels_df, shapes_dir, 'samecolor')
 
 
 if __name__ == "__main__":
