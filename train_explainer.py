@@ -1,12 +1,21 @@
 import sys
 import os
 from classifier.DenseNet import pretrained_classifier as celeba_classifier
-from classifier.SimpleNet import pretrained_classifier as dsprites_classifier
-from explainer.networks_128 import Discriminator_Ordinal, Generator_Encoder_Decoder, Discriminator_Contrastive
+from classifier.SimpleNet import pretrained_classifier as shapes_classifier
+from data_loader.data_loader import CelebALoader, ShapesLoader
+
+from explainer.networks_128 import Discriminator_Ordinal as celeba_Discriminator_Ordinal
+from explainer.networks_128 import Generator_Encoder_Decoder as celeba_Generator_Encoder_Decoder
+from explainer.networks_128 import Discriminator_Contrastive as celeba_Discriminator_Contrastive
+
+from explainer.networks_64 import Discriminator_Ordinal as shapes_Discriminator_Ordinal
+from explainer.networks_64 import Generator_Encoder_Decoder as shapes_Generator_Encoder_Decoder
+from explainer.networks_64 import Discriminator_Contrastive as shapes_Discriminator_Contrastive
+
 import tensorflow.contrib.slim as slim
 import tensorflow as tf
 import numpy as np
-from utils import *
+from utils import save_images, read_data_file
 from losses import *
 import pdb
 import yaml
@@ -85,8 +94,16 @@ def train():
     dataset = config['dataset']
     if dataset == 'CelebA':
         pretrained_classifier = celeba_classifier
-    elif dataset == 'dsprites':
-        pretrained_classifier = dsprites_classifier
+        my_data_loader = CelebALoader()
+        Discriminator_Ordinal = celeba_Discriminator_Ordinal
+        Generator_Encoder_Decoder = celeba_Generator_Encoder_Decoder
+        Discriminator_Contrastive = celeba_Discriminator_Contrastive
+    elif dataset == 'shapes':
+        pretrained_classifier = shapes_classifier
+        my_data_loader = ShapesLoader()
+        Discriminator_Ordinal = shapes_Discriminator_Ordinal
+        Generator_Encoder_Decoder = shapes_Generator_Encoder_Decoder
+        Discriminator_Contrastive = shapes_Discriminator_Contrastive
     if ckpt_dir_continue == '':
         continue_train = False
     else:
@@ -268,8 +285,9 @@ def train():
         np.random.shuffle(data)
         for i in range(data.shape[0] // BATCH_SIZE):
             image_paths = data[i * BATCH_SIZE:(i + 1) * BATCH_SIZE]
-            img, labels = load_images_and_labels(image_paths, config['image_dir'], 1, file_names_dict, input_size,
-                                                 channels, do_center_crop=True)
+            img, labels = my_data_loader.load_images_and_labels(image_paths, image_dir=config['image_dir'], n_class=1,
+                                                                file_names_dict=file_names_dict, input_size=input_size,
+                                                                num_channel=channels, do_center_crop=True)
 
             labels = labels.ravel()
             target_labels = np.random.randint(0, high=NUMS_CLASS, size=BATCH_SIZE)
@@ -308,8 +326,11 @@ def train():
 
             def save_results(sess, step):
                 num_seed_imgs = 8
-                img, labels = load_images_and_labels(image_paths[0:num_seed_imgs], config['image_dir'], 1,
-                                                     file_names_dict, input_size, channels, do_center_crop=True)
+                img, labels = my_data_loader.load_images_and_labels(image_paths[0:num_seed_imgs],
+                                                                    image_dir=config['image_dir'], n_class=1,
+                                                                    file_names_dict=file_names_dict,
+                                                                    input_size=input_size, num_channel=channels,
+                                                                    do_center_crop=True)
                 labels = np.repeat(labels, NUMS_CLASS * k_dim, 0)
                 labels = labels.ravel()
                 labels = convert_ordinal_to_binary(labels, NUMS_CLASS)
