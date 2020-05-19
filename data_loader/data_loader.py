@@ -74,4 +74,4 @@ class ShapesLoader(DataLoader):
         labels = np.zeros((imgs_names.shape[0], n_class), dtype=np.float32)
         for i, img_name in tqdm(enumerate(imgs_names)):
             labels[i] = file_names_dict[str(img_name)]
-        return self.images[imgs_names], labels
+        return self.images[imgs_names.astype(np.int32)], labels
