@@ -91,6 +91,8 @@ def train():
     k_dim = config['k_dim']
     lambda_r = config['lambda_r']
     disentangle = k_dim > 1
+    discriminate_evert_nth = config['discriminate_every_nth']
+    generate_every_nth = config['generate_every_nth']
     dataset = config['dataset']
     if dataset == 'CelebA':
         pretrained_classifier = celeba_classifier
@@ -308,11 +310,13 @@ def train():
                 my_feed_dict = {y_t: target_labels, x_source: img, train_phase: True,
                                 y_s: labels}
 
-            _, d_loss, summary_str = sess.run([D_opt, D_loss, d_sum],
-                                              feed_dict=my_feed_dict)
-            writer.add_summary(summary_str, counter)
+            if (i + 1) % discriminate_evert_nth == 0:
 
-            if (i + 1) % 5 == 0:
+                _, d_loss, summary_str = sess.run([D_opt, D_loss, d_sum],
+                                                  feed_dict=my_feed_dict)
+                writer.add_summary(summary_str, counter)
+
+            if (i + 1) % generate_every_nth == 0:
                 if disentangle:
                     _, g_loss, g_summary_str, r_loss, r_summary_str = sess.run([G_opt, G_loss, g_sum, R_loss, r_sum],
                                                                                feed_dict=my_feed_dict)
