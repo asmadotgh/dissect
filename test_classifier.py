@@ -122,7 +122,7 @@ def test(config):
     train_names, train_prediction_y, train_true_y = get_predictions(data_train, 'train')
     test_names, test_prediction_y, test_true_y = get_predictions(data_test, 'test')
 
-    return train_names, train_prediction_y, train_true_y, test_names, test_prediction_y, test_true_y, config
+    return train_names, train_prediction_y, train_true_y, test_names, test_prediction_y, test_true_y
 
 
 def process_classifier_output(names, prediction_y, true_y, names_i, prediction_y_i, true_y_i, config):
@@ -132,7 +132,7 @@ def process_classifier_output(names, prediction_y, true_y, names_i, prediction_y
         os.makedirs(experiment_dir)
 
     view_results(prediction_y, true_y, prediction_y_i, true_y_i)
-    df, train_df, test_df = create_dataframe(names, true_y, prediction_y, names_i, true_y_i, prediction_y_i)
+    df, train_df, test_df = create_dataframe(names, prediction_y, true_y, names_i, prediction_y_i, true_y_i)
     plot_reliability_curve(df, 'Data-before binning', os.path.join(experiment_dir, 'before_rc.pdf'))
     calibrated_df = calibrated_sampling(df)
     plot_reliability_curve(calibrated_df, 'Data-after binning', os.path.join(experiment_dir, 'after_rc.pdf'))
@@ -165,16 +165,17 @@ def view_results(prediction_y, true_y, prediction_y_i, true_y_i):
             break
 
 
-def create_dataframe(names, true_y, prediction_y,
-                     names_i, true_y_i, prediction_y_i, current_index=0, current_index_prob=1):
-    df_train_results = pd.DataFrame(data=[names, true_y[:, current_index], prediction_y[:, current_index_prob]]).T
-    df_train_results = df_train_results.rename(index=str, columns={0: "filename", 1: "label", 2: "prob"})
+def create_dataframe(names, prediction_y, true_y,
+                     names_i, prediction_y_i, true_y_i, current_index=0, current_index_prob=1):
+    # TODO not change data type esp for when the indices are int (do nto make them float)
+    df_train_results = pd.DataFrame(
+        data={'filename': names, 'label': true_y[:, current_index], 'prob': prediction_y[:, current_index_prob]})
     df_train_results['bin'] = np.floor(df_train_results["prob"].astype('float') * 10).astype('int')
     print('Train set size: ', df_train_results.shape)
     print('Number of points in each bin - Train: ', np.unique(df_train_results['bin'], return_counts=True))
 
-    df_test_results = pd.DataFrame(data=[names_i, true_y_i[:, current_index], prediction_y_i[:, current_index_prob]]).T
-    df_test_results = df_test_results.rename(index=str, columns={0: "filename", 1: "label", 2: "prob"})
+    df_test_results = pd.DataFrame(data={
+        'filename': names_i, 'label': true_y_i[:, current_index], 'prob': prediction_y_i[:, current_index_prob]})
     df_test_results['bin'] = np.floor(df_test_results["prob"].astype('float') * 10).astype('int')
     print('Test set size: ', df_test_results.shape)
     print('Number of points in each bin - Test: ', np.unique(df_test_results['bin'], return_counts=True))
@@ -273,7 +274,7 @@ def get_prediction_from_file(config):
     print(test_names.shape, test_prediction_y.shape, test_true_y.shape)
     train_true_y = np.reshape(train_true_y, [-1, config['num_class']])
     test_true_y = np.reshape(test_true_y, [-1, config['num_class']])
-    return train_names, train_prediction_y, train_true_y, test_names, test_prediction_y, test_true_y, config
+    return train_names, train_prediction_y, train_true_y, test_names, test_prediction_y, test_true_y
 
 
 if __name__ == "__main__":
@@ -288,10 +289,9 @@ if __name__ == "__main__":
     print(config)
 
     try:
-        train_names, train_prediction_y, train_true_y, test_names, test_prediction_y, test_true_y, config = get_prediction_from_file(config)
+        train_names, train_prediction_y, train_true_y, test_names, test_prediction_y, test_true_y = get_prediction_from_file(config)
     except:
         print('Prediction files do not exist. Loading checkpoint and calculating predictions...')
-        train_names, train_prediction_y, train_true_y, test_names, test_prediction_y, test_true_y, config = test(config)
-
+        train_names, train_prediction_y, train_true_y, test_names, test_prediction_y, test_true_y = test(config)
     process_classifier_output(train_names, train_prediction_y, train_true_y,
                               test_names, test_prediction_y, test_true_y, config)
