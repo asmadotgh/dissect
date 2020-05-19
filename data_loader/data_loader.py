@@ -50,6 +50,9 @@ class ShapesLoader(DataLoader):
         shapes_dir = os.path.join('data', 'shapes')
         dataset = h5py.File(os.path.join(shapes_dir, '3dshapes.h5'), 'r')
         self.images = np.array(dataset['images'])  # array shape [480000, 64, 64, 3], uint8 in range(256)
+        self.images = self.images / 255.0
+        self.images = self.images - 0.5
+        self.images = self.images * 2.0
         self.attributes = np.array(dataset['labels'])
         self._image_shape = self.images.shape[1:]  # [64, 64, 3]
         self._label_shape = self.attributes.shape[1:]  # [6]
