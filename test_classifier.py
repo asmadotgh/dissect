@@ -136,7 +136,7 @@ def process_classifier_output(names, prediction_y, true_y, names_i, prediction_y
     plot_reliability_curve(df, 'Data-before binning', os.path.join(experiment_dir, 'before_rc.pdf'), n_bins)
     calibrated_df = calibrated_sampling(df, n_bins)
     plot_reliability_curve(calibrated_df, 'Data-after binning', os.path.join(experiment_dir, 'after_rc.pdf'), n_bins)
-    save_output(calibrated_df, train_df, test_df, experiment_dir)
+    save_output(calibrated_df, train_df, test_df, experiment_dir, n_bins)
 
 
 def view_results(prediction_y, true_y, prediction_y_i, true_y_i):
@@ -237,12 +237,15 @@ def calibrated_sampling(df, n_bins):
     return df_bin_all
 
 
-def save_output(df_bin_all, df_train_results, df_test_results, experiment_dir):
+def save_output(df_bin_all, df_train_results, df_test_results, experiment_dir, n_bins):
 
     df_temp = df_bin_all[['filename', 'bin']]
     df_temp.to_csv(os.path.join(experiment_dir, 'list_attr.txt'), sep=' ', index=None, header=None)
     one_line = str(df_temp.shape[0]) + '\n'
-    second_line = "0-0.09 0.1-0.19 0.2-0.29 0.3-0.39 0.4-0.49 0.5-0.59 0.6-0.69 0.7-0.79 0.8-0.89 0.9-0.99\n"
+    step = 1.0 / float(n_bins)
+    second_line = ''
+    for i in range(n_bins):
+        second_line += '[{:.2f} {:.2f}) '.format(i * step, (i + 1) * step)
     with open(os.path.join(experiment_dir, 'list_attr.txt'), 'r+') as fp:
         lines = fp.readlines()  # lines is list of line, each element '...\n'
         lines.insert(0, one_line)  # you can use any index if you know the line index
