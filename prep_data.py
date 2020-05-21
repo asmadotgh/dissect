@@ -109,7 +109,7 @@ def prep_celeba(attributes=[['Smiling'], ['Young'], ['No_Beard'], ['Heavy_Makeup
         read_saved_files(attribute, celebA_dir, image_dir)
 
 
-def prep_shapes(target_labels=['samecolor', 'redsamecolor']):
+def prep_shapes(target_labels=['samecolor', 'redsamecolor', 'redcolor']):
     shapes_dir = os.path.join('data', 'shapes')
     dataset = h5py.File(os.path.join(shapes_dir, '3dshapes.h5'), 'r')
     attributes = dataset['labels']  # array shape [480000, 6], float64
@@ -133,6 +133,8 @@ def prep_shapes(target_labels=['samecolor', 'redsamecolor']):
         elif target_label == 'redsamecolor':
             labels = ((attributes[:, 0] == attributes[:, 1]) & (attributes[:, 0] == attributes[:, 2]) & (
                         attributes[:, 0] == 0)).astype(np.int32)
+        elif target_label == 'redcolor':
+            labels = ((attributes[:, 0] == 0) | (attributes[:, 1] == 0) | (attributes[:, 2] == 0)).astype(np.int32)
         shape_labels_df = pd.DataFrame(data={'filenames': all_images, target_label: labels})
 
         save_processed_label_file(shape_labels_df, shapes_dir, target_label)
