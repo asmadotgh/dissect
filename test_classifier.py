@@ -125,17 +125,17 @@ def test(config):
     return train_names, train_prediction_y, train_true_y, test_names, test_prediction_y, test_true_y
 
 
-def process_classifier_output(names, prediction_y, true_y, names_i, prediction_y_i, true_y_i, config):
+def process_classifier_output(names, prediction_y, true_y, names_i, prediction_y_i, true_y_i, config, n_bins):
     experiment_dir = os.path.join(config['log_dir'], config['name'], 'explainer_input')
     print('Saving files to: ', experiment_dir)
     if not os.path.exists(experiment_dir):
         os.makedirs(experiment_dir)
 
     view_results(prediction_y, true_y, prediction_y_i, true_y_i)
-    df, train_df, test_df = create_dataframe(names, prediction_y, true_y, names_i, prediction_y_i, true_y_i)
-    plot_reliability_curve(df, 'Data-before binning', os.path.join(experiment_dir, 'before_rc.pdf'))
-    calibrated_df = calibrated_sampling(df)
-    plot_reliability_curve(calibrated_df, 'Data-after binning', os.path.join(experiment_dir, 'after_rc.pdf'))
+    df, train_df, test_df = create_dataframe(names, prediction_y, true_y, names_i, prediction_y_i, true_y_i, n_bins)
+    plot_reliability_curve(df, 'Data-before binning', os.path.join(experiment_dir, 'before_rc.pdf'), n_bins)
+    calibrated_df = calibrated_sampling(df, n_bins)
+    plot_reliability_curve(calibrated_df, 'Data-after binning', os.path.join(experiment_dir, 'after_rc.pdf'), n_bins)
     save_output(calibrated_df, train_df, test_df, experiment_dir)
 
 
@@ -166,17 +166,16 @@ def view_results(prediction_y, true_y, prediction_y_i, true_y_i):
 
 
 def create_dataframe(names, prediction_y, true_y,
-                     names_i, prediction_y_i, true_y_i, current_index=0, current_index_prob=1):
-    # TODO not change data type esp for when the indices are int (do nto make them float)
+                     names_i, prediction_y_i, true_y_i, n_bins, current_index=0, current_index_prob=1):
     df_train_results = pd.DataFrame(
         data={'filename': names, 'label': true_y[:, current_index], 'prob': prediction_y[:, current_index_prob]})
-    df_train_results['bin'] = np.floor(df_train_results["prob"].astype('float') * 10).astype('int')
+    df_train_results['bin'] = np.floor(df_train_results["prob"].astype('float') * n_bins).astype('int')
     print('Train set size: ', df_train_results.shape)
     print('Number of points in each bin - Train: ', np.unique(df_train_results['bin'], return_counts=True))
 
     df_test_results = pd.DataFrame(data={
         'filename': names_i, 'label': true_y_i[:, current_index], 'prob': prediction_y_i[:, current_index_prob]})
-    df_test_results['bin'] = np.floor(df_test_results["prob"].astype('float') * 10).astype('int')
+    df_test_results['bin'] = np.floor(df_test_results["prob"].astype('float') * n_bins).astype('int')
     print('Test set size: ', df_test_results.shape)
     print('Number of points in each bin - Test: ', np.unique(df_test_results['bin'], return_counts=True))
 
@@ -187,12 +186,12 @@ def create_dataframe(names, prediction_y, true_y,
     return df, df_train_results, df_test_results
 
 
-def plot_reliability_curve(df, legend_str, fname):
+def plot_reliability_curve(df, legend_str, fname, n_bins):
     # Reliability Curve
     plt.figure()
     true_label = np.asarray(df['label']).astype(int)
     predicted_prob = np.asarray(df["prob"]).astype(float)
-    fraction_of_positives, mean_predicted_value = calibration_curve(true_label, predicted_prob, n_bins=10)
+    fraction_of_positives, mean_predicted_value = calibration_curve(true_label, predicted_prob, n_bins=n_bins)
     clf_score = brier_score_loss(true_label, predicted_prob, pos_label=1)
     plt.plot(mean_predicted_value, fraction_of_positives, "s-",
              label="%s (%1.3f)" % (legend_str, clf_score))
@@ -204,17 +203,17 @@ def plot_reliability_curve(df, legend_str, fname):
     plt.savefig(fname, bbox_inches='tight')
 
 
-def calibrated_sampling(df):
+def calibrated_sampling(df, n_bins):
     n = 5000
 
-    for i in range(10):
+    for i in range(n_bins):
         df_bin = df.loc[df['bin'] == i]
         print(df_bin.shape)
         print(np.min(df_bin['prob']), np.max(df_bin['prob']))
         print(np.unique(df_bin['label'], return_counts=True))
         df_bin_0 = df.loc[(df['bin'] == i) & (df['label'] == 0)]
         df_bin_1 = df.loc[(df['bin'] == i) & (df['label'] == 1)]
-        n_0 = int((1 - (0.1 * i)) * n)
+        n_0 = int((1 - (1.0/float(n_bins) * i)) * n)
         if df_bin_0.shape[0] >= n_0:
             df_bin = df_bin_0.sample(n=n_0)
         else:
@@ -279,14 +278,15 @@ def get_prediction_from_file(config):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        '--config', '-c', default='configs/celebA_YSBBB_Classifier.yaml'
-    )
+    parser.add_argument('--config', '-c', default='configs/celebA_YSBBB_Classifier.yaml')
+    parser.add_argument('--n_bins', '-nb', type=int, default='10')
     args = parser.parse_args()
     # ============= Load config =============
     config_path = args.config
     config = yaml.load(open(config_path))
     print(config)
+
+    n_bins = args.n_bins
 
     try:
         train_names, train_prediction_y, train_true_y, test_names, test_prediction_y, test_true_y = get_prediction_from_file(config)
@@ -294,4 +294,4 @@ if __name__ == "__main__":
         print('Prediction files do not exist. Loading checkpoint and calculating predictions...')
         train_names, train_prediction_y, train_true_y, test_names, test_prediction_y, test_true_y = test(config)
     process_classifier_output(train_names, train_prediction_y, train_true_y,
-                              test_names, test_prediction_y, test_true_y, config)
+                              test_names, test_prediction_y, test_true_y, config, n_bins)
