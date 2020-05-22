@@ -15,8 +15,8 @@ def downsampling(inputs):
     return tf.nn.avg_pool(inputs, [1, 2, 2, 1], [1, 2, 2, 1], "SAME")
 
 
-def relu(inputs):
-    return tf.nn.relu(inputs)
+def relu(inputs, name=None):
+    return tf.nn.relu(inputs, name=name)
 
 
 def _l2normalize(v, eps=1e-12):
@@ -210,17 +210,14 @@ def D_FirstResblock(name, inputs, nums_out, update_collection, is_down=True, is_
     return inputs + temp
 
 
-def batch_norm_layer(x, is_training, name='batch_norm'):
-    return tf.contrib.layers.batch_norm(x, decay=0.9, updates_collections=None, epsilon=1e-5, scale=True,
-                                        is_training=is_training, scope=name)
-
-
-def dense_layer(x, layer_size, isTrain, scope, dropout_p=0.8):
-    with tf.name_scope(scope):
-        x = batch_norm_layer(x, is_training=isTrain, name=scope + '_batch')
-        # print("bn: ", x)
-        x = tf.nn.relu(x)
-        x = tf.layers.dense(x, layer_size, name=scope + '_dense')
-        x = tf.layers.dropout(x, dropout_p, isTrain)
-        # print("dense: ", x)
-        return x
+# def dense_relu_layer(name, inputs, nums_out, update_collection=None, is_sn=False):
+#     inputs = dense(name+'_dense', inputs, nums_out, update_collection=update_collection, is_sn=is_sn)
+#     inputs = relu(inputs, name=name+'_relu')
+#     return inputs
+#
+#
+# def conv_pooling_layer(x, nums_out, scope, k_size=3, strides=1):
+#     with tf.name_scope(scope):
+#         x = conv(scope+'_conv', x, nums_out, k_size, strides)
+#         x = tf.nn.max_pool(x, [1, k_size, k_size, 1], [1, strides, strides, 1], 'SAME', name=scope+'_max_pool')
+#         return x
