@@ -28,7 +28,8 @@ class Generator_Encoder_Decoder:
             inputs = G_Resblock_Encoder("Encoder-ResBlock3", inputs, 512, train_phase, y,
                                         nums_class)  # [n, 16, 16, 512]
             print(':', inputs)
-            inputs = G_Resblock_Encoder("Encoder-ResBlock2", inputs, 1024, train_phase, y, nums_class)  # [n, 8, 8, 1024]
+            inputs = G_Resblock_Encoder("Encoder-ResBlock2", inputs, 1024, train_phase, y,
+                                        nums_class)  # [n, 8, 8, 1024]
             print(':', inputs)
             embedding = G_Resblock_Encoder("Encoder-ResBlock1", inputs, 1024, train_phase, y,
                                            nums_class)  # [n, 4, 4, 1024]
@@ -94,25 +95,76 @@ class Discriminator_Ordinal:
 
 
 class Discriminator_Contrastive:
-    # Compares embedding of source and perturbed image and determines which "knob" has been shifted
+    # Compares two images and determines which "knob" has been shifted
     def __init__(self, name='disentangler'):
         self.name = name
 
-    def __call__(self, inputs, train_phase, nums_dim):
+    def __call__(self, inputs, num_dims):
         with tf.variable_scope(name_or_scope=self.name, reuse=tf.AUTO_REUSE):
-            # input: [n, 4, 4, 2048]
+            # input: [n, 128, 128, 6]
             print(inputs)
-            inputs = tf.layers.flatten(inputs)
+            inputs = D_FirstResblock("ResBlock1", inputs, 64, None, is_down=True)  # [n, 64, 64, 64]
             print(inputs)
-            inputs = dense_layer(inputs, 256, train_phase, 'RBlock1')  # [n, 256]
+            inputs = D_Resblock("ResBlock2", inputs, 128, None, is_down=True)  # [n, 32, 32, 128]
             print(inputs)
-            inputs = dense_layer(inputs, 128, train_phase, 'RBlock2')  # [n, 128]
+            inputs = relu(inputs)
+            print(inputs)  # [n, 32, 32, 128]
+            inputs = global_sum_pooling(inputs)  # [n, 128]
             print(inputs)
-            inputs = dense_layer(inputs, 64, train_phase, 'RBlock3')  # [n, 64]
-            print(inputs)
-            inputs = dense_layer(inputs, nums_dim, train_phase, 'RBlock4')  # [n, nums_dim]
-            print(inputs)
+            inputs = dense("dense", inputs, num_dims, None, is_sn=True)  # [n, num_dims]
             return inputs
 
     def var_list(self):
         return tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, self.name)
+
+
+# not working
+# class Discriminator_Contrastive:
+#     # Compares two images and determines which "knob" has been shifted
+#     def __init__(self, name='disentangler'):
+#         self.name = name
+#
+#     def __call__(self, inputs, num_dims):
+#         def __call__(self, inputs, num_dims):
+#             with tf.variable_scope(name_or_scope=self.name, reuse=tf.AUTO_REUSE):
+#                 # input: [n, 128, 128, 6]
+#                 print(inputs)
+#                 inputs = conv_pooling_layer(inputs, 128, 'Block-1')
+#                 print(inputs)
+#                 inputs = conv_pooling_layer(inputs, 128, 'Block-2')
+#                 print(inputs)
+#                 inputs = tf.layers.flatten(inputs, 'Block-3-flatten')
+#                 print(inputs)
+#                 inputs = dense_relu_layer('Block-4', inputs, 512)
+#                 print(inputs)
+#                 inputs = dense_relu_layer('Block-5', inputs, num_dims)
+#                 print(inputs)
+#                 return inputs
+#
+#     def var_list(self):
+#         return tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, self.name)
+
+# on embedding instead of image
+# class Discriminator_Contrastive:
+#     # Compares embedding of source and perturbed image and determines which "knob" has been shifted
+#     def __init__(self, name='disentangler'):
+#         self.name = name
+#
+#     def __call__(self, inputs, num_dims):
+#         with tf.variable_scope(name_or_scope=self.name, reuse=tf.AUTO_REUSE):
+#             # input: [n, 4, 4, 2048]
+#             print(inputs)
+#             inputs = tf.layers.flatten(inputs)
+#             print(inputs)
+#             inputs = dense_relu_layer(inputs, 256, 'RBlock1')  # [n, 256]
+#             print(inputs)
+#             inputs = dense_relu_layer(inputs, 128, 'RBlock2')  # [n, 128]
+#             print(inputs)
+#             inputs = dense_relu_layer(inputs, 64, 'RBlock3')  # [n, 64]
+#             print(inputs)
+#             inputs = dense_relu_layer(inputs, num_dims, 'RBlock4')  # [n, nums_dim]
+#             print(inputs)
+#             return inputs
+#
+#     def var_list(self):
+#         return tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, self.name)
