@@ -12,6 +12,11 @@ seaborn==0.9.1
 sklearn==0.0
 pillow==7.1.2
 
+# Needed for notebook Experiment_CelebA.ipynb, but not working yet
+# pyflann==1.6.14
+# scikit-image==0.15.0
+# keras-vggface==0.5
+
 
 #### Original git repo tensorflow version 1.12
 tensorboard==1.12.2

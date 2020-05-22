@@ -29,31 +29,38 @@ python setup.py develop
 ```
 
 ## Usage
-1. Download the CelebA dataset and create train and test fold for the classifier. 
+1. Download the CelebA and [**3d-shapes**](https://github.com/deepmind/3d-shapes) dataset and create train and test fold for the classifier. 
 
-CelebA dataset is downloaded and saved at ./data/CelebA. IPython notebook creates text files with file names and labels and save them at ./data/CelebA/. These text files are used as input data to train the classifier.
+If you already have them downloaded, it is easier to just run:
 ```
-./notebooks/Data_Processing.ipynb
+./python/prep_data.py
 ```
+
 2. Train a classifier. Skip this step if you have a pretrained classifier. The output of the classifier is saved at: $log_dir$/$name$. 
 
-2.a. To train a multi-label classifier on all 40 attributes
+2.a. To train a binary classifier on shapes dataset
 ```
-python train_classifier.py --config 'configs/celebA_DenseNet_Classifier.yaml'
+python train_classifier.py --config 'configs/shapes_redcolor_Classifier.yaml'
 ```
-2.b. To train a binary classifier on 1 attribute
+2.b. To train a binary classifier on CelebA with 1 attribute, e.g. Smiling
 ```
 python train_classifier.py --config 'configs/celebA_Smile_Classifier.yaml'
 ```
-3. Process the output of the classifier and create input for Explanation model by discretizing the posterior probability.
+
+3. Evaluate the binary classifier and export predicted probabilities. 
+Process the output of the classifier and create input for Explanation model by discretizing the posterior probability.
 The input data for the Explanation model is saved at: $log_dir$/$name$/explainer_input/
 ```
-./notebooks/Process_Classifier_Output.ipynb
+python test_classifier.py --config 'configs/shapes_redcolor_Classifier.yaml' --n_bins=3
+
+python test_classifier.py --config 'configs/celebA_Smile_Classifier.yaml' --n_bins=10
 ```
 
-4. Trainer explainer model. The output is saved at: $log_dir$/$name$.
+4. Train explainer model. The output is saved at: $log_dir$/$name$.
 ```
-python train_explainer.py --config 'configs/celebA_Young_Explainer.yaml'
+python train_explainer.py --config 'configs/shapes_redcolor_Explainer.yaml'
+
+python train_explainer.py --config 'configs/celebA_Smile_Explainer.yaml'
 ```
 
 5. Explore the trained Explanation model and see qualitative results.
@@ -63,13 +70,31 @@ python train_explainer.py --config 'configs/celebA_Young_Explainer.yaml'
 
 6. Save results of the trained Explanation model for quantitative experiments.
 ```
-python test_explainer.py --config 'configs/celebA_Young_Explainer.yaml'
+python test_explainer.py --config 'configs/celebA_Smile_Explainer.yaml'
 ```
 
 7. Use the saved results to perform experiments as shown in paper
 ```
 ./notebooks/Experiment_CelebA.ipynb 
 ```
+
+## Other
+If you want to follow where they get downloaded form and interactively see the data for CelebA: CelebA dataset is downloaded and saved at ./data/CelebA. IPython notebook creates text files with file names and labels and save them at ./data/CelebA/. These text files are used as input data to train the classifier.
+```
+./notebooks/Data_Processing.ipynb
+```
+
+To train a multi-label classifier on all 40 attributes
+```
+python train_classifier.py --config 'configs/celebA_DenseNet_Classifier.yaml'
+```
+
+To interactively process the output of the classifier and create input for Explanation model by discretizing the posterior probability.
+The input data for the Explanation model is saved at: $log_dir$/$name$/explainer_input/
+```
+./notebooks/Process_Classifier_Output.ipynb
+```
+
 # Cite
 
 ```
