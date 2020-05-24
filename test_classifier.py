@@ -133,9 +133,9 @@ def process_classifier_output(names, prediction_y, true_y, names_i, prediction_y
 
     view_results(prediction_y, true_y, prediction_y_i, true_y_i)
     df, train_df, test_df = create_dataframe(names, prediction_y, true_y, names_i, prediction_y_i, true_y_i, n_bins)
-    plot_reliability_curve(df, 'Data-before binning', os.path.join(experiment_dir, 'before_rc.pdf'), n_bins)
+    plot_reliability_curve(df, 'Data-before binning', os.path.join(experiment_dir, 'before_rc'), n_bins)
     calibrated_df = calibrated_sampling(df, n_bins)
-    plot_reliability_curve(calibrated_df, 'Data-after binning', os.path.join(experiment_dir, 'after_rc.pdf'), n_bins)
+    plot_reliability_curve(calibrated_df, 'Data-after binning', os.path.join(experiment_dir, 'after_rc'), n_bins)
     save_output(calibrated_df, train_df, test_df, experiment_dir, n_bins)
 
 
@@ -200,7 +200,7 @@ def plot_reliability_curve(df, legend_str, fname, n_bins):
     plt.ylim([-0.05, 1.05])
     plt.title('Calibration plots  (reliability curve)')
     plt.legend()
-    plt.savefig(fname, bbox_inches='tight')
+    plt.savefig('{}_{}.pdf'.format(fname, n_bins), bbox_inches='tight')
 
 
 def calibrated_sampling(df, n_bins):
@@ -238,26 +238,27 @@ def calibrated_sampling(df, n_bins):
 
 
 def save_output(df_bin_all, df_train_results, df_test_results, experiment_dir, n_bins):
-
+    output_fname = 'list_attr_{}.txt'.format(n_bins)
     df_temp = df_bin_all[['filename', 'bin']]
-    df_temp.to_csv(os.path.join(experiment_dir, 'list_attr.txt'), sep=' ', index=None, header=None)
+    df_temp.to_csv(os.path.join(experiment_dir, output_fname), sep=' ', index=None, header=None)
     one_line = str(df_temp.shape[0]) + '\n'
     step = 1.0 / float(n_bins)
     second_line = ''
     for i in range(n_bins):
         second_line += '[{:.2f} {:.2f}) '.format(i * step, (i + 1) * step)
-    with open(os.path.join(experiment_dir, 'list_attr.txt'), 'r+') as fp:
+    second_line += '\n'
+    with open(os.path.join(experiment_dir, output_fname), 'r+') as fp:
         lines = fp.readlines()  # lines is list of line, each element '...\n'
         lines.insert(0, one_line)  # you can use any index if you know the line index
         lines.insert(1, second_line)
         fp.seek(0)  # file pointer locates at the beginning to write the whole file again
         fp.writelines(lines)
 
-    df_bin_all.to_csv(os.path.join(experiment_dir, 'Data_Output_Classifier.csv'), sep=' ', index=None)
-    df_test_results.to_csv(os.path.join(experiment_dir, 'Data_Output_Classifier_All_Test.csv'), sep=' ',
-                           index=None)
-    df_train_results.to_csv(os.path.join(experiment_dir, 'Data_Output_Classifier_All_Train.csv'), sep=' ',
-                            index=None)
+    df_bin_all.to_csv(os.path.join(experiment_dir, 'Data_Output_Classifier_{}.csv'.format(n_bins)), sep=' ', index=None)
+    df_test_results.to_csv(os.path.join(experiment_dir, 'Data_Output_Classifier_All_Test_{}.csv'.format(n_bins)),
+                           sep=' ', index=None)
+    df_train_results.to_csv(os.path.join(experiment_dir, 'Data_Output_Classifier_All_Train_{}.csv'.format(n_bins)),
+                            sep=' ', index=None)
 
 
 def get_prediction_from_file(config):
