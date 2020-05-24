@@ -46,8 +46,7 @@ class CelebALoader(DataLoader):
 
 
 class ShapesLoader(DataLoader):
-    def __init__(self):
-        shapes_dir = os.path.join('data', 'shapes')
+    def __init__(self, shapes_dir=os.path.join('data', 'shapes')):
         dataset = h5py.File(os.path.join(shapes_dir, '3dshapes.h5'), 'r')
         self.images = np.array(dataset['images'])  # array shape [480000, 64, 64, 3], uint8 in range(256)
         # self.tmp_list = [22103,  32326,  39700,  39762,  41438,  81878, 120354, 123537, 204645, 233680, 237513, 243088, 244214, 272086, 288175, 293670, 299583, 310185, 337757, 338381, 338470, 344301, 345434, 384254, 402656, 429581, 436864, 449940, 454830, 470974, 472860, 476493]
