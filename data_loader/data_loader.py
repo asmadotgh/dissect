@@ -5,6 +5,7 @@ import os
 from utils import crop_center
 import h5py
 import pdb
+from utils import read_data_file
 
 
 class DataLoader:
@@ -51,13 +52,9 @@ class ShapesLoader(DataLoader):
         dataset = h5py.File(os.path.join(shapes_dir, '3dshapes.h5'), 'r')
         if self.dbg_mode:
             print('Debug mode activated. Only a few samples from the shapes datasets will be considered.')
-            self.tmp_list = [229, 3753, 9917, 10717, 13471,
-                             19852, 21540, 25590, 25786, 31434,
-                             37964, 38895, 50215, 91497, 102568,
-                             122088, 132915, 141220, 146668, 204761,
-                             248365, 284811, 299992, 303453, 308216,
-                             314104, 349699, 349775, 386496, 391018,
-                             404224, 430755]
+            _, file_names_dict = read_data_file('./output/classifier/shapes-redcolor/explainer_input/list_attr_2.txt')
+            _tmp_list = list(file_names_dict.keys())[:32]
+            self.tmp_list = list(np.sort([int(ind) for ind in _tmp_list]))
             self.images = np.array(dataset['images'][self.tmp_list])
         else:
             self.images = np.array(dataset['images'])  # array shape [480000, 64, 64, 3], uint8 in range(256)
