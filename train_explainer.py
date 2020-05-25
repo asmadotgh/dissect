@@ -41,8 +41,8 @@ def convert_ordinal_to_binary(y, n):
 
 def train():
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        '--config', '-c', default='configs/celebA_Young_Explainer.yaml')
+    parser.add_argument('--config', '-c', default='configs/celebA_Young_Explainer.yaml')
+    parser.add_argument('--debug', '-d', action='store_true')
     args = parser.parse_args()
 
     # ============= Load config =============
@@ -102,7 +102,10 @@ def train():
         Discriminator_Contrastive = celeba_Discriminator_Contrastive
     elif dataset == 'shapes':
         pretrained_classifier = shapes_classifier
-        my_data_loader = ShapesLoader()
+        if args.debug:
+            my_data_loader = ShapesLoader(dbg_mode=True)
+        else:
+            my_data_loader = ShapesLoader()
         Discriminator_Ordinal = shapes_Discriminator_Ordinal
         Generator_Encoder_Decoder = shapes_Generator_Encoder_Decoder
         Discriminator_Contrastive = shapes_Discriminator_Contrastive
@@ -160,7 +163,7 @@ def train():
         fake_source_recons_img, x_source_img_embedding = G(x_source, train_phase, y_source, NUMS_CLASS)
     fake_target_logits = D(fake_target_img, y_t, NUMS_CLASS, None)
 
-    # ============= pre-trained classifier =============      
+    # ============= pre-trained classifier =============
     real_img_cls_logit_pretrained, real_img_cls_prediction = pretrained_classifier(x_source, NUMS_CLASS_cls,
                                                                                    reuse=False, name='classifier')
     fake_img_cls_logit_pretrained, fake_img_cls_prediction = pretrained_classifier(fake_target_img, NUMS_CLASS_cls,
@@ -304,14 +307,10 @@ def train():
     for e in range(1, EPOCHS + 1):
         np.random.shuffle(data)
         for i in range(data.shape[0] // BATCH_SIZE):
-            image_paths = data[i * BATCH_SIZE:(i + 1) * BATCH_SIZE]
-            # image_paths = np.array(['81878', '310185', '288175', '204645', '123537',
-            #                '41438', '402656', '39762', '345434', '299583',
-            #                '243088', '472860', '32326', '429581', '237513',
-            #                '436864', '233680', '338381', '476493', '470974',
-            #                '454830', '384254', '244214', '293670', '449940',
-            #                '272086', '338470', '120354', '39700', '22103',
-            #                '344301', '337757'])  # TODO for quick dbg
+            if args.debug:
+                image_paths = np.array([str(ind) for ind in my_data_loader.tmp_list])
+            else:
+                image_paths = data[i * BATCH_SIZE:(i + 1) * BATCH_SIZE]
             img, labels = my_data_loader.load_images_and_labels(image_paths, image_dir=config['image_dir'], n_class=1,
                                                                 file_names_dict=file_names_dict, input_size=input_size,
                                                                 num_channel=channels, do_center_crop=True)
