@@ -109,27 +109,3 @@ class Discriminator_Contrastive:
 
     def var_list(self):
         return tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, self.name)
-
-# class Discriminator_Contrastive:
-#     # Compares two images and determines which "knob" has been shifted
-#     def __init__(self, name='disentangler'):
-#         self.name = name
-#
-#     def __call__(self, inputs, num_dims):
-#         with tf.variable_scope(name_or_scope=self.name, reuse=tf.AUTO_REUSE):
-#             # input: [n, 64, 64, 6]
-#             print(inputs)
-#             inputs = conv_pooling_layer(inputs, 64, 'Block-1', k_size=4, strides=2)
-#             print(inputs)
-#             inputs = conv_pooling_layer(inputs, 128, 'Block-2', k_size=4, strides=2)
-#             print(inputs)
-#             inputs = tf.layers.flatten(inputs, 'Block-3-flatten')
-#             print(inputs)
-#             inputs = dense_relu_layer('Block-4', inputs, 512)
-#             print(inputs)
-#             inputs = dense_relu_layer('Block-5', inputs, num_dims)
-#             print(inputs)
-#             return inputs
-#
-#     def var_list(self):
-#         return tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, self.name)
