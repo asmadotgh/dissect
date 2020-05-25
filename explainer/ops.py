@@ -208,16 +208,3 @@ def D_FirstResblock(name, inputs, nums_out, update_collection, is_down=True, is_
             temp = downsampling(temp)
             temp = conv("identity", temp, nums_out, 1, 1, update_collection=update_collection, is_sn=is_sn)
     return inputs + temp
-
-
-# def dense_relu_layer(name, inputs, nums_out, update_collection=None, is_sn=False):
-#     inputs = dense(name+'_dense', inputs, nums_out, update_collection=update_collection, is_sn=is_sn)
-#     inputs = relu(inputs, name=name+'_relu')
-#     return inputs
-#
-#
-# def conv_pooling_layer(x, nums_out, scope, k_size=3, strides=1):
-#     with tf.name_scope(scope):
-#         x = conv(scope+'_conv', x, nums_out, k_size, strides)
-#         x = tf.nn.max_pool(x, [1, k_size, k_size, 1], [1, strides, strides, 1], 'SAME', name=scope+'_max_pool')
-#         return x
