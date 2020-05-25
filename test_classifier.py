@@ -125,7 +125,8 @@ def test(config):
     return train_names, train_prediction_y, train_true_y, test_names, test_prediction_y, test_true_y
 
 
-def process_classifier_output(names, prediction_y, true_y, names_i, prediction_y_i, true_y_i, config, n_bins):
+def process_classifier_output(names, prediction_y, true_y, names_i, prediction_y_i, true_y_i, config, n_bins,
+                              max_samples_per_bin):
     experiment_dir = os.path.join(config['log_dir'], config['name'], 'explainer_input')
     print('Saving files to: ', experiment_dir)
     if not os.path.exists(experiment_dir):
@@ -134,9 +135,9 @@ def process_classifier_output(names, prediction_y, true_y, names_i, prediction_y
     view_results(prediction_y, true_y, prediction_y_i, true_y_i)
     df, train_df, test_df = create_dataframe(names, prediction_y, true_y, names_i, prediction_y_i, true_y_i, n_bins)
     plot_reliability_curve(df, 'Data-before binning', os.path.join(experiment_dir, 'before_rc'), n_bins)
-    calibrated_df = calibrated_sampling(df, n_bins)
+    calibrated_df = calibrated_sampling(df, n_bins, max_samples_per_bin)
     plot_reliability_curve(calibrated_df, 'Data-after binning', os.path.join(experiment_dir, 'after_rc'), n_bins)
-    save_output(calibrated_df, train_df, test_df, experiment_dir, n_bins)
+    save_output(calibrated_df, train_df, test_df, experiment_dir, n_bins, max_samples_per_bin)
 
 
 def view_results(prediction_y, true_y, prediction_y_i, true_y_i):
@@ -203,8 +204,7 @@ def plot_reliability_curve(df, legend_str, fname, n_bins):
     plt.savefig('{}_{}.pdf'.format(fname, n_bins), bbox_inches='tight')
 
 
-def calibrated_sampling(df, n_bins):
-    n = 5000
+def calibrated_sampling(df, n_bins, n):
 
     for i in range(n_bins):
         df_bin = df.loc[df['bin'] == i]
@@ -237,8 +237,8 @@ def calibrated_sampling(df, n_bins):
     return df_bin_all
 
 
-def save_output(df_bin_all, df_train_results, df_test_results, experiment_dir, n_bins):
-    output_fname = 'list_attr_{}.txt'.format(n_bins)
+def save_output(df_bin_all, df_train_results, df_test_results, experiment_dir, n_bins, max_samples_per_bin):
+    output_fname = 'list_attr_{}_{}.txt'.format(n_bins, max_samples_per_bin)
     df_temp = df_bin_all[['filename', 'bin']]
     df_temp.to_csv(os.path.join(experiment_dir, output_fname), sep=' ', index=None, header=None)
     one_line = str(df_temp.shape[0]) + '\n'
@@ -254,11 +254,15 @@ def save_output(df_bin_all, df_train_results, df_test_results, experiment_dir, n
         fp.seek(0)  # file pointer locates at the beginning to write the whole file again
         fp.writelines(lines)
 
-    df_bin_all.to_csv(os.path.join(experiment_dir, 'Data_Output_Classifier_{}.csv'.format(n_bins)), sep=' ', index=None)
-    df_test_results.to_csv(os.path.join(experiment_dir, 'Data_Output_Classifier_All_Test_{}.csv'.format(n_bins)),
-                           sep=' ', index=None)
-    df_train_results.to_csv(os.path.join(experiment_dir, 'Data_Output_Classifier_All_Train_{}.csv'.format(n_bins)),
-                            sep=' ', index=None)
+    df_bin_all.to_csv(
+        os.path.join(experiment_dir, 'Data_Output_Classifier_{}_{}.csv'.format(n_bins, max_samples_per_bin)), sep=' ',
+        index=None)
+    df_test_results.to_csv(
+        os.path.join(experiment_dir, 'Data_Output_Classifier_All_Test_{}_{}.csv'.format(n_bins, max_samples_per_bin)),
+        sep=' ', index=None)
+    df_train_results.to_csv(
+        os.path.join(experiment_dir, 'Data_Output_Classifier_All_Train_{}_{}.csv'.format(n_bins, max_samples_per_bin)),
+        sep=' ', index=None)
 
 
 def get_prediction_from_file(config):
@@ -283,14 +287,13 @@ def get_prediction_from_file(config):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', '-c', default='configs/celebA_YSBBB_Classifier.yaml')
-    parser.add_argument('--n_bins', '-nb', type=int, default='10')
+    parser.add_argument('--n_bins', '-nb', type=int, default=10)
+    parser.add_argument('--max_samples_per_bin', '-ms', type=int, default=5000)
     args = parser.parse_args()
     # ============= Load config =============
     config_path = args.config
     config = yaml.load(open(config_path))
     print(config)
-
-    n_bins = args.n_bins
 
     try:
         train_names, train_prediction_y, train_true_y, test_names, test_prediction_y, test_true_y = get_prediction_from_file(config)
@@ -298,4 +301,4 @@ if __name__ == "__main__":
         print('Prediction files do not exist. Loading checkpoint and calculating predictions...')
         train_names, train_prediction_y, train_true_y, test_names, test_prediction_y, test_true_y = test(config)
     process_classifier_output(train_names, train_prediction_y, train_true_y,
-                              test_names, test_prediction_y, test_true_y, config, n_bins)
+                              test_names, test_prediction_y, test_true_y, config, args.n_bins, args.max_samples_per_bin)
