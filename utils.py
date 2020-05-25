@@ -109,3 +109,49 @@ def calc_accuracy(prediction, labels):
 
 def calc_accuracy_with_logits(logits, labels):
     return calc_accuracy(tf.nn.sigmoid(logits), labels)
+
+
+# To avoid memory issues: https://github.com/tensorflow/tensorflow/issues/9545
+def absolute_variable_scope(name_or_scope, reuse=tf.AUTO_REUSE):
+    current_scope = tf.get_default_graph().get_name_scope()
+    if not current_scope:
+        if name_or_scope.endswith('/'):
+            variable_scope = tf.variable_scope(name_or_scope, reuse=reuse)
+        else:
+            variable_scope = tf.variable_scope('{}/'.format(name_or_scope), reuse=reuse)
+    else:
+        variable_scope = tf.variable_scope('{}/{}/'.format(current_scope, name_or_scope), reuse=reuse)
+    return variable_scope
+
+
+def absolute_name_scope(scope, reuse=tf.AUTO_REUSE):
+    """Builds an absolute tf.name_scope relative to the current_scope.
+  This is helpful to reuse nested name scopes.
+
+  E.g. The following will happen when using regular tf.name_scope:
+
+    with tf.name_scope('outer'):
+      with tf.name_scope('inner'):
+        print(tf.constant(1)) # Will print outer/inner/Const:0
+    with tf.name_scope('outer'):
+      with tf.name_scope('inner'):
+        print(tf.constant(1)) # Will print outer/inner_1/Const:0
+
+  With absolute_name_scope:
+
+    with absolute_name_scope('outer'):
+      with absolute_name_scope('inner'):
+        print(tf.constant(1)) # Will print outer/inner/Const:0
+    with absolute_name_scope('outer'):
+      with absolute_name_scope('inner'):
+        print(tf.constant(1)) # Will print outer/inner/Const_1:0
+  """
+    current_scope = tf.get_default_graph().get_name_scope()
+    if not current_scope:
+        if scope.endswith('/'):
+            scope = tf.variable_scope(scope, reuse=reuse)
+        else:
+            scope = tf.variable_scope('{}/'.format(scope), reuse=reuse)
+    else:
+        scope = tf.variable_scope('{}/{}/'.format(current_scope, scope), reuse=reuse)
+    return scope
