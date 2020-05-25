@@ -103,7 +103,8 @@ def train():
     elif dataset == 'shapes':
         pretrained_classifier = shapes_classifier
         if args.debug:
-            my_data_loader = ShapesLoader(dbg_mode=True)
+            my_data_loader = ShapesLoader(dbg_mode=True, dbg_batch_size=config['batch_size'],
+                                          dbg_n_bins=config['num_bins'])
         else:
             my_data_loader = ShapesLoader()
         Discriminator_Ordinal = shapes_Discriminator_Ordinal
