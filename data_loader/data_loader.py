@@ -46,11 +46,21 @@ class CelebALoader(DataLoader):
 
 
 class ShapesLoader(DataLoader):
-    def __init__(self, shapes_dir=os.path.join('data', 'shapes')):
+    def __init__(self, shapes_dir=os.path.join('data', 'shapes'), dbg_mode=False):
+        self.dbg_mode = dbg_mode
         dataset = h5py.File(os.path.join(shapes_dir, '3dshapes.h5'), 'r')
-        self.images = np.array(dataset['images'])  # array shape [480000, 64, 64, 3], uint8 in range(256)
-        # self.tmp_list = [22103,  32326,  39700,  39762,  41438,  81878, 120354, 123537, 204645, 233680, 237513, 243088, 244214, 272086, 288175, 293670, 299583, 310185, 337757, 338381, 338470, 344301, 345434, 384254, 402656, 429581, 436864, 449940, 454830, 470974, 472860, 476493]
-        # self.images = np.array(dataset['images'][self.tmp_list])  # TODO for quick dbg
+        if self.dbg_mode:
+            print('Debug mode activated. Only a few samples from the shapes datasets will be considered.')
+            self.tmp_list = [229, 3753, 9917, 10717, 13471,
+                             19852, 21540, 25590, 25786, 31434,
+                             37964, 38895, 50215, 91497, 102568,
+                             122088, 132915, 141220, 146668, 204761,
+                             248365, 284811, 299992, 303453, 308216,
+                             314104, 349699, 349775, 386496, 391018,
+                             404224, 430755]
+            self.images = np.array(dataset['images'][self.tmp_list])
+        else:
+            self.images = np.array(dataset['images'])  # array shape [480000, 64, 64, 3], uint8 in range(256)
         self.images = self.images / 255.0
         self.images = self.images - 0.5
         self.images = self.images * 2.0
@@ -78,6 +88,9 @@ class ShapesLoader(DataLoader):
         labels = np.zeros((imgs_names.shape[0], n_class), dtype=np.float32)
         for i, img_name in tqdm(enumerate(imgs_names)):
             labels[i] = file_names_dict[str(img_name)]
-        return self.images[imgs_names.astype(np.int32)], labels
-        # tmp_inds = [self.tmp_list.index(int(ind)) for ind in imgs_names]
-        # return self.images[tmp_inds], labels  # TODO for quick dbg only
+        if self.dbg_mode:
+            tmp_inds = [self.tmp_list.index(int(ind)) for ind in imgs_names]
+            return self.images[tmp_inds], labels
+        else:
+            return self.images[imgs_names.astype(np.int32)], labels
+
