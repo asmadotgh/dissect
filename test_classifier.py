@@ -205,7 +205,7 @@ def plot_reliability_curve(df, legend_str, fname, n_bins):
 
 
 def calibrated_sampling(df, n_bins, n):
-
+    df_bin_all = pd.DataFrame()
     for i in range(n_bins):
         df_bin = df.loc[df['bin'] == i]
         print(df_bin.shape)
@@ -220,15 +220,13 @@ def calibrated_sampling(df, n_bins, n):
             df_bin = df_bin_0
             n_0 = df_bin_0.shape[0]
         n_1 = n - n_0
-        if df_bin_1.shape[0] >= n_1:
-            df_bin = pd.concat([df_bin, df_bin_1.sample(n=n_1)])
-        else:
-            df_bin = pd.concat([df_bin, df_bin_1])
+        if n_1 > 0:
+            if df_bin_1.shape[0] >= n_1:
+                df_bin = pd.concat([df_bin, df_bin_1.sample(n=n_1)])
+            else:
+                df_bin = pd.concat([df_bin, df_bin_1])
 
-        if i == 0:
-            df_bin_all = df_bin
-        else:
-            df_bin_all = pd.concat([df_bin, df_bin_all])
+        df_bin_all = pd.concat([df_bin, df_bin_all])
         print('Binned df shape: ', df_bin_all.shape)
         print('Binned df unique labels', np.unique(df_bin['label'], return_counts=True))
 
