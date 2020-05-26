@@ -93,13 +93,8 @@ def test(config_path, dbg_mode=False, export_output=True, dbg_size=10):
     elif dataset == 'shapes':
         pretrained_classifier = shapes_classifier
         if dbg_mode:
-            if 'max_samples_per_bin' in config.keys():
-                my_data_loader = ShapesLoader(dbg_mode=True, dbg_size=dbg_size,
-                                              dbg_n_bins=config['num_bins'],
-                                              dbg_max_samples_per_bin=config['max_samples_per_bin'])
-            else:
-                my_data_loader = ShapesLoader(dbg_mode=True, dbg_size=dbg_size,
-                                              dbg_n_bins=config['num_bins'])
+            my_data_loader = ShapesLoader(dbg_mode=True, dbg_size=dbg_size,
+                                          dbg_image_label_dict=config['image_label_dict'])
         else:
             my_data_loader = ShapesLoader()
         Discriminator_Ordinal = shapes_Discriminator_Ordinal

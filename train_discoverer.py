@@ -106,8 +106,7 @@ def train():
         pretrained_classifier = shapes_classifier
         if args.debug:
             my_data_loader = ShapesLoader(dbg_mode=True, dbg_size=config['batch_size'],
-                                          dbg_n_bins=config['num_bins'],
-                                          dbg_max_samples_per_bin=config['max_samples_per_bin'])
+                                          dbg_image_label_dict=config['image_label_dict'])
         else:
             my_data_loader = ShapesLoader()
         Discriminator_Ordinal = shapes_Discriminator_Ordinal
