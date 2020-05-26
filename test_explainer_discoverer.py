@@ -112,7 +112,10 @@ def test(config_path, dbg_mode=False, export_output=True, dbg_size=10):
     except:
         print("Problem in reading input data file : ", config['image_label_dict'])
         sys.exit()
-    data = np.asarray(list(file_names_dict.keys()))
+    if dbg_mode and dataset == 'shapes':
+        data = np.array([str(ind) for ind in my_data_loader.tmp_list])
+    else:
+        data = np.asarray(list(file_names_dict.keys()))
     print("The classification categories are: ")
     print(categories)
     print('The size of the training set: ', data.shape[0])
@@ -230,10 +233,8 @@ def test(config_path, dbg_mode=False, export_output=True, dbg_size=10):
     output_dict = {}
 
     np.random.shuffle(data)
-    if dbg_mode:
-        data = np.array([str(ind) for ind in my_data_loader.tmp_list])
-    else:
-        data = data[0:num_samples]
+
+    data = data[0:num_samples]
     for i in range(math.ceil(data.shape[0] / BATCH_SIZE)):
         image_paths = data[i * BATCH_SIZE:(i + 1) * BATCH_SIZE]
         # num_seed_imgs is either BATCH_SIZE
