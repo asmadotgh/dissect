@@ -47,7 +47,7 @@ class CelebALoader(DataLoader):
 
 
 class ShapesLoader(DataLoader):
-    def __init__(self, project_dir='.', dbg_mode=False, dbg_batch_size=32, dbg_n_bins=2,
+    def __init__(self, project_dir='.', dbg_mode=False, dbg_size=32, dbg_n_bins=2,
                  dbg_max_samples_per_bin=5000):
         shapes_dir = os.path.join(project_dir, 'data', 'shapes')
         self.dbg_mode = dbg_mode
@@ -58,7 +58,7 @@ class ShapesLoader(DataLoader):
                 os.path.join(project_dir,
                 'output/classifier/shapes-redcolor/explainer_input/list_attr_{}_{}.txt'.format(
                     dbg_n_bins, dbg_max_samples_per_bin)))
-            _tmp_list = list(file_names_dict.keys())[:dbg_batch_size]
+            _tmp_list = list(file_names_dict.keys())[:dbg_size]
             self.tmp_list = list(np.sort([int(ind) for ind in _tmp_list]))
             self.images = np.array(dataset['images'][self.tmp_list])
         else:
