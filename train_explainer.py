@@ -404,10 +404,6 @@ def train():
             if counter % 500 == 0:
                 saver.save(sess, ckpt_dir + "/model%2d.ckpt" % counter)
 
-            if counter > 100000:
-                saver.save(sess, ckpt_dir + "/model%2d.ckpt" % counter)
-                sys.exit()
-
 
 if __name__ == "__main__":
     train()
