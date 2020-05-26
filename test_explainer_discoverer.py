@@ -224,8 +224,8 @@ def test(config_path, dbg_mode=False, export_output=True, dbg_size=10):
     fake_ps = _empty_arr
     recon_ps = _empty_arr
     if HAS_MAIN_DIM:
-        fake_s_main_dim_imgs = np.empty([])
-        fake_s_main_dim_embeds = np.empty([])
+        fake_s_main_dim_imgs = _empty_arr
+        fake_s_main_dim_embeds = _empty_arr
 
     output_dict = {}
 
