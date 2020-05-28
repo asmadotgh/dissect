@@ -113,7 +113,6 @@ def test(config_path, dbg_mode=False, export_output=True, dbg_size=10):
     if disentangle:
         y_regularizer = tf.placeholder(tf.int32, [None], name='y_regularizer')
         y_r = tf.placeholder(tf.float32, [None, k_dim], name='y_r')
-        y_r_0 = tf.zeros_like(y_r, name='y_r_0')
 
     if HAS_MAIN_DIM:
         generation_dim = k_dim_plus
@@ -155,6 +154,7 @@ def test(config_path, dbg_mode=False, export_output=True, dbg_size=10):
     real_img_recons_cls_logit_pretrained, real_img_recons_cls_prediction = pretrained_classifier(fake_source_img,
                                                                                                  NUMS_CLASS_cls,
                                                                                                  reuse=True)
+    fake_img_target_cls_prediction = tf.cast(y_target, tf.float32) * 1.0 / float(NUMS_CLASS - 1)
     # ============= session =============
     sess = tf.Session()
     sess.run(tf.global_variables_initializer())
@@ -205,8 +205,9 @@ def test(config_path, dbg_mode=False, export_output=True, dbg_size=10):
     fake_s_recon_imgs = _empty_arr
     s_embeds = _empty_arr
     real_ps = _empty_arr
-    fake_ps = _empty_arr
     recon_ps = _empty_arr
+    fake_target_ps = _empty_arr
+    fake_ps = _empty_arr
     if HAS_MAIN_DIM:
         fake_s_main_dim_imgs = _empty_arr
         fake_s_main_dim_embeds = _empty_arr
@@ -246,11 +247,12 @@ def test(config_path, dbg_mode=False, export_output=True, dbg_size=10):
             my_feed_dict = {y_t: target_labels, x_source: img_repeat, train_phase: False,
                             y_s: labels}
 
-        fake_t_img, fake_t_embed, fake_s_img, fake_s_embed, fake_s_recon_img, s_embed, real_p, fake_p, recon_p = sess.run(
+        fake_t_img, fake_t_embed, fake_s_img, fake_s_embed, fake_s_recon_img, s_embed, real_p, recon_p, fake_target_p, fake_p = sess.run(
             [fake_target_img, fake_target_img_embedding,
              fake_source_img, fake_source_img_embedding,
              fake_source_recons_img, x_source_img_embedding,
-             real_img_cls_prediction, fake_img_cls_prediction, real_img_recons_cls_prediction],
+             real_img_cls_prediction, real_img_recons_cls_prediction,
+             fake_img_target_cls_prediction, fake_img_cls_prediction],
             feed_dict=my_feed_dict)
         if HAS_MAIN_DIM:
             fake_s_main_dim_img, fake_s_main_dim_embed = sess.run(
@@ -266,14 +268,16 @@ def test(config_path, dbg_mode=False, export_output=True, dbg_size=10):
         fake_s_recon_imgs = _safe_append(fake_s_recon_imgs, fake_s_recon_img, axis=0)
         s_embeds = _safe_append(s_embeds, s_embed, axis=0)
         real_ps = _safe_append(real_ps, real_p, axis=0)
-        fake_ps = _safe_append(fake_ps, fake_p, axis=0)
         recon_ps = _safe_append(recon_ps, recon_p, axis=0)
+        fake_target_ps = _safe_append(fake_target_ps, fake_target_p, axis=0)
+        fake_ps = _safe_append(fake_ps, fake_p, axis=0)
 
         output_dict.update({'names': names, 'real_imgs': real_imgs,
                             'fake_t_imgs': fake_t_imgs, 'fake_t_embeds': fake_t_embeds,
                             'fake_s_imgs': fake_s_imgs, 'fake_s_embeds': fake_s_embeds,
                             'fake_s_recon_imgs': fake_s_recon_imgs, 's_embeds': s_embeds,
-                            'real_ps': real_ps, 'fake_ps': fake_ps, 'recon_ps': recon_ps})
+                            'real_ps': real_ps, 'recon_ps': recon_ps,
+                            'fake_target_ps': fake_target_ps, 'fake_ps': fake_ps})
 
         if HAS_MAIN_DIM:
             fake_s_main_dim_imgs = _safe_append(fake_s_main_dim_imgs, fake_s_main_dim_img, axis=0)
