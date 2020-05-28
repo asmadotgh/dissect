@@ -33,7 +33,7 @@ def convert_ordinal_to_binary(y, n):
     return new_y
 
 
-def test(config_path, dbg_mode=False, export_output=True, dbg_size=10):
+def test(config_path, dbg_img_label_dict=None, dbg_mode=False, export_output=True, dbg_size=10, dbg_img_indices=[]):
     # ============= Load config =============
 
     config = yaml.load(open(config_path))
@@ -57,6 +57,10 @@ def test(config_path, dbg_mode=False, export_output=True, dbg_size=10):
     NUMS_CLASS_cls = config['num_class']
     NUMS_CLASS = config['num_bins']
     ckpt_dir_continue = ckpt_dir
+    if dbg_img_label_dict is not None:
+        image_label_dict = dbg_img_label_dict
+    else:
+        image_label_dict = config['image_label_dict']
     # there is a main knob, at index k_dim, and k_dim disentangled knobs at indices 0..k_dim-1
     k_dim = config['k_dim']
     k_dim_plus = k_dim + 1
@@ -76,12 +80,14 @@ def test(config_path, dbg_mode=False, export_output=True, dbg_size=10):
         pretrained_classifier = shapes_classifier
         if dbg_mode:
             my_data_loader = ShapesLoader(dbg_mode=True, dbg_size=dbg_size,
-                                          dbg_image_label_dict=config['image_label_dict'])
+                                          dbg_image_label_dict=image_label_dict,
+                                          dbg_img_indices=dbg_img_indices)
         else:
             # my_data_loader = ShapesLoader()
             # for efficiency, let's just load as many samples as we need
             my_data_loader = ShapesLoader(dbg_mode=True, dbg_size=num_samples,
-                                          dbg_image_label_dict=config['image_label_dict'])
+                                          dbg_image_label_dict=image_label_dict,
+                                          dbg_img_indices=dbg_img_indices)
             dbg_mode = True
 
         Discriminator_Ordinal = shapes_Discriminator_Ordinal
@@ -89,14 +95,15 @@ def test(config_path, dbg_mode=False, export_output=True, dbg_size=10):
 
     # ============= Data =============
     try:
-        categories, file_names_dict = read_data_file(config['image_label_dict'])
+        categories, file_names_dict = read_data_file(image_label_dict)
     except:
-        print("Problem in reading input data file : ", config['image_label_dict'])
+        print("Problem in reading input data file : ", image_label_dict)
         sys.exit()
     if dbg_mode and dataset == 'shapes':
         data = np.array([str(ind) for ind in my_data_loader.tmp_list])
     else:
         data = np.asarray(list(file_names_dict.keys()))
+    pdb.set_trace()
     print("The classification categories are: ")
     print(categories)
     print('The size of the training set: ', data.shape[0])
@@ -301,4 +308,16 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', '-c', type=str)
     args = parser.parse_args()
+
+    SHAPES_SAMPLE_INDICES = [238944, 209719, 220278, 205815, 211683,
+                             245252, 255045, 258990, 259189, 273785,
+                             310989, 335740, 331129, 294386, 295864,
+                             311612, 234900, 215548, 163173, 230222,
+                             9701, 369743, 249791, 475592, 9693,
+                             14923, 15074, 327300, 38929, 327003]
+    SHAPES_IMG_LBL_DICT = './output/classifier/shapes-redcyan/explainer_input/list_attr_3_480000.txt'
+
+    test(args.config, dbg_mode=True, export_output=False, dbg_size=8, dbg_img_indices=SHAPES_SAMPLE_INDICES,
+         dbg_img_label_dict=SHAPES_IMG_LBL_DICT)
+    pdb.set_trace() #
     test(args.config)
