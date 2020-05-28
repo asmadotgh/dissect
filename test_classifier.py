@@ -298,5 +298,6 @@ if __name__ == "__main__":
     except:
         print('Prediction files do not exist. Loading checkpoint and calculating predictions...')
         train_names, train_prediction_y, train_true_y, test_names, test_prediction_y, test_true_y = test(config)
-    process_classifier_output(train_names, train_prediction_y, train_true_y,
-                              test_names, test_prediction_y, test_true_y, config, args.n_bins, args.max_samples_per_bin)
+        pass
+    process_classifier_output(train_names, train_prediction_y, train_true_y, test_names, test_prediction_y,
+                              test_true_y, config, args.n_bins, args.max_samples_per_bin)
