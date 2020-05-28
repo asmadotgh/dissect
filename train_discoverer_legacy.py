@@ -1,3 +1,12 @@
+# The main difference from train_explainer.py is that we introduce a new dimension: main knob that is covering
+# everything together
+# we enforce a new cycle loss, meaning that if we modify a dimension with one dimension,
+# and return with the main dimension, it should get a similar image. Assuming the main dimension does not have
+# any redundant features, this should enforce not including redundant information just for the sake of
+# disentanglement
+
+# In practice, it turned out to be not very successful, and a simple L1 norm produced better results.
+
 import sys
 import os
 from classifier.DenseNet import pretrained_classifier as celeba_classifier
@@ -26,14 +35,6 @@ import random
 import warnings
 import argparse
 
-# The main difference from train_explainer.py is that we introduce a new dimension: main knob that is covering
-# everything together
-# we enforce a new cycle loss, meaning that if we modify a dimension with one dimension,
-# and return with the main dimension, it should get a similar image. Assuming the main dimension does not have
-# any redundant features, this should enforce not including redundant information just for the sake of
-# disentanglement
-
-# In practice, it turned out to be not very successful, and a simple L1 norm produced better results.
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 

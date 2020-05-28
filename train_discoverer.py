@@ -1,3 +1,6 @@
+# The difference from train_explainer.py is that we introduce a
+# regularizer to tease apart which knob shifted.
+
 import sys
 import os
 from classifier.DenseNet import pretrained_classifier as celeba_classifier
@@ -25,9 +28,6 @@ from datetime import datetime
 import random
 import warnings
 import argparse
-
-# The difference from train_explainer.py is that we introduce a
-# regularizer to tease apart which knob shifted.
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
