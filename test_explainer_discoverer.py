@@ -13,6 +13,7 @@ from explainer.networks_64 import Generator_Encoder_Decoder as shapes_Generator_
 import tensorflow.contrib.slim as slim
 from utils import *
 from losses import *
+import numpy as np
 import pdb
 import yaml
 import warnings
@@ -294,7 +295,6 @@ def test(config_path, dbg_mode=False, export_output=True, dbg_size=10):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        '--config', '-c', default='configs/celebA_Young_Explainer.yaml')
+    parser.add_argument('--config', '-c', type=str)
     args = parser.parse_args()
     test(args.config)

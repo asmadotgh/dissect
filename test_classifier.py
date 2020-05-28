@@ -284,7 +284,7 @@ def get_prediction_from_file(config):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', '-c', default='configs/celebA_YSBBB_Classifier.yaml')
+    parser.add_argument('--config', '-c', type=str)
     parser.add_argument('--n_bins', '-nb', type=int, default=10)
     parser.add_argument('--max_samples_per_bin', '-ms', type=int, default=5000)
     args = parser.parse_args()

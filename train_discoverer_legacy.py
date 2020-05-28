@@ -50,7 +50,7 @@ def convert_ordinal_to_binary(y, n):
 
 def train():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--config', '-c', default='configs/celebA_Young_Explainer.yaml')
+    parser.add_argument('--config', '-c', type=str)
     parser.add_argument('--debug', '-d', action='store_true')
     args = parser.parse_args()
 

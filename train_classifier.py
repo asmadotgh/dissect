@@ -18,9 +18,7 @@ warnings.filterwarnings("ignore")
 
 def train():
     parser = argparse.ArgumentParser()
-    parser.add_argument(
-        '--config', '-c', default='configs/celebA_YSBBB_Classifier.yaml'
-    )
+    parser.add_argument('--config', '-c', type=str)
     args = parser.parse_args()
     # ============= Load config =============
     config_path = args.config
