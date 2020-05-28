@@ -176,7 +176,7 @@ def train():
     def _safe_log(inp):
         EPS = 1e-10
         return tf.math.log(inp + EPS)
-    real_p = tf.cast(y_target, tf.float32) * 1.0/float(NUMS_CLASS)
+    real_p = tf.cast(y_target, tf.float32) * 1.0 / float(NUMS_CLASS - 1)
     fake_q = fake_img_cls_prediction[:, target_class]
     fake_evaluation = (real_p * _safe_log(fake_q)) + ((1 - real_p) * _safe_log(1 - fake_q))
     fake_evaluation = -tf.reduce_mean(fake_evaluation)
