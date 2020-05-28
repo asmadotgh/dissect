@@ -1,3 +1,6 @@
+# This is the baseline vanilla Explainer code, extended to support multiple dimensions
+# However, nothing enforces distinctness of the "knobs"
+
 import sys
 import os
 from classifier.DenseNet import pretrained_classifier as celeba_classifier
@@ -89,7 +92,6 @@ def train():
     save_summary = int(config['save_summary'])
     ckpt_dir_continue = config['ckpt_dir_continue']
     k_dim = config['k_dim']
-    lambda_r = config['lambda_r']
     disentangle = k_dim > 1
     discriminate_evert_nth = config['discriminate_every_nth']
     generate_every_nth = config['generate_every_nth']
@@ -99,7 +101,6 @@ def train():
         my_data_loader = CelebALoader()
         Discriminator_Ordinal = celeba_Discriminator_Ordinal
         Generator_Encoder_Decoder = celeba_Generator_Encoder_Decoder
-        Discriminator_Contrastive = celeba_Discriminator_Contrastive
     elif dataset == 'shapes':
         pretrained_classifier = shapes_classifier
         if args.debug:
@@ -109,7 +110,6 @@ def train():
             my_data_loader = ShapesLoader()
         Discriminator_Ordinal = shapes_Discriminator_Ordinal
         Generator_Encoder_Decoder = shapes_Generator_Encoder_Decoder
-        Discriminator_Contrastive = shapes_Discriminator_Contrastive
     if ckpt_dir_continue == '':
         continue_train = False
     else:
@@ -141,8 +141,6 @@ def train():
 
     if disentangle:
         y_regularizer = tf.placeholder(tf.int32, [None], name='y_regularizer')
-        y_r = tf.placeholder(tf.float32, [None, k_dim], name='y_r')
-        y_r_0 = tf.zeros_like(y_r, name='y_r_0')
 
     # ============= G & D =============
     G = Generator_Encoder_Decoder("generator")  # with conditional BN, SAGAN: SN here as well
@@ -188,15 +186,6 @@ def train():
                             1 - real_img_recons_cls_prediction[:, target_class]))
     recons_evaluation = -tf.reduce_mean(recons_evaluation)
 
-    # ============= regularizer constrastive discriminator loss =============
-    if disentangle:
-        R = Discriminator_Contrastive("disentangler")
-
-        regularizer_fake_target_v_source_logits = R(tf.concat([x_source, fake_target_img], axis=-1), k_dim)
-        regularizer_fake_source_v_target_logits = R(tf.concat([fake_target_img, fake_source_img], axis=-1), k_dim)
-        regularizer_fake_source_v_source_logits = R(tf.concat([x_source, fake_source_img], axis=-1), k_dim)
-        regularizer_fake_source_recon_v_source_logits = R(tf.concat([x_source, fake_source_recons_img], axis=-1), k_dim)
-
     # ============= Loss =============
     D_loss_GAN, D_acc, D_precision, D_recall = discriminator_loss('hinge', real_source_logits, fake_target_logits)
     G_loss_GAN = generator_loss('hinge', fake_target_logits)
@@ -206,29 +195,9 @@ def train():
     D_loss = (D_loss_GAN * lambda_GAN)
     D_opt = tf.train.AdamOptimizer(2e-4, beta1=0., beta2=0.9).minimize(D_loss, var_list=D.var_list())
 
-    # TODO uncomment if want to do R in a seperate step
-    # G_loss = (G_loss_GAN * lambda_GAN) + (G_loss_rec * lambda_cyc) + (G_loss_cyc * lambda_cyc) + (
-    #         fake_evaluation * lambda_cls) + (recons_evaluation * lambda_cls)
-    # G_opt = tf.train.AdamOptimizer(2e-4, beta1=0., beta2=0.9).minimize(G_loss, var_list=G.var_list())
-
-    if disentangle:
-        R_fake_target_v_source_loss, R_fake_target_v_source_acc = contrastive_regularizer_loss(
-            regularizer_fake_target_v_source_logits, y_r)
-        R_fake_source_v_target_loss, R_fake_source_v_target_acc = contrastive_regularizer_loss(
-            regularizer_fake_source_v_target_logits, y_r)
-        R_fake_source_v_source_loss, R_fake_source_v_source_acc = contrastive_regularizer_loss(
-            regularizer_fake_source_v_source_logits, y_r_0)
-        R_fake_source_recon_v_source_loss, R_fake_source_recon_v_source_acc = contrastive_regularizer_loss(
-            regularizer_fake_source_recon_v_source_logits, y_r_0)
-        R_loss = R_fake_target_v_source_loss + R_fake_source_v_target_loss + R_fake_source_v_source_loss + R_fake_source_recon_v_source_loss
-        R_opt = tf.train.AdamOptimizer(2e-4, beta1=0., beta2=0.9).minimize(R_loss * lambda_r, var_list=R.var_list())
-        G_loss = (G_loss_GAN * lambda_GAN) + (G_loss_rec * lambda_cyc) + (G_loss_cyc * lambda_cyc) + (
-                fake_evaluation * lambda_cls) + (recons_evaluation * lambda_cls) + (R_loss * lambda_r)
-        G_opt = tf.train.AdamOptimizer(2e-4, beta1=0., beta2=0.9).minimize(G_loss, var_list=G.var_list() + R.var_list())
-    else:
-        G_loss = (G_loss_GAN * lambda_GAN) + (G_loss_rec * lambda_cyc) + (G_loss_cyc * lambda_cyc) + (
-                fake_evaluation * lambda_cls) + (recons_evaluation * lambda_cls)
-        G_opt = tf.train.AdamOptimizer(2e-4, beta1=0., beta2=0.9).minimize(G_loss, var_list=G.var_list())
+    G_loss = (G_loss_GAN * lambda_GAN) + (G_loss_rec * lambda_cyc) + (G_loss_cyc * lambda_cyc) + (
+            fake_evaluation * lambda_cls) + (recons_evaluation * lambda_cls)
+    G_opt = tf.train.AdamOptimizer(2e-4, beta1=0., beta2=0.9).minimize(G_loss, var_list=G.var_list())
 
     # ============= summary =============
     real_img_sum = tf.summary.image('real_img', x_source)
@@ -253,22 +222,6 @@ def train():
         [loss_g_sum, loss_g_GAN_sum, loss_g_cyc_sum, real_img_sum, G_loss_rec_sum, fake_img_sum,
          fake_source_img_sum, fake_source_recons_img_sum, evaluation_fake, evaluation_recons])
     d_sum = tf.summary.merge([loss_d_sum, loss_d_GAN_sum, acc_d, precision_d, recall_d])
-    # Disentangler Contrastive Regularizer losses
-    if disentangle:
-        loss_r_fake_target_v_source = tf.summary.scalar('disentangler/loss_r_fake_target_v_source', R_fake_target_v_source_loss)
-        loss_r_fake_source_v_target = tf.summary.scalar('disentangler/loss_r_fake_source_v_target', R_fake_source_v_target_loss)
-        loss_r_fake_source_v_source = tf.summary.scalar('disentangler/loss_r_fake_source_v_source', R_fake_source_v_source_loss)
-        loss_r_fake_source_recon_v_source = tf.summary.scalar('disentangler/loss_r_fake_source_recon_v_source', R_fake_source_recon_v_source_loss)
-        loss_r_sum = tf.summary.scalar('disentangler/loss_r', R_loss)
-
-        acc_r_fake_target_v_source = tf.summary.scalar('disentangler/acc_r_fake_target_v_source', R_fake_target_v_source_acc)
-        acc_r_fake_source_v_target = tf.summary.scalar('disentangler/acc_r_fake_source_v_target', R_fake_source_v_target_acc)
-        acc_r_fake_source_v_source = tf.summary.scalar('disentangler/acc_r_fake_source_v_source', R_fake_source_v_source_acc)
-        acc_r_fake_source_recon_v_source = tf.summary.scalar('disentangler/acc_r_fake_source_recon_v_source', R_fake_source_recon_v_source_acc)
-        r_sum = tf.summary.merge(
-            [loss_r_sum, loss_r_fake_target_v_source, loss_r_fake_source_v_target, loss_r_fake_source_v_source,
-             loss_r_fake_source_recon_v_source, acc_r_fake_target_v_source, acc_r_fake_source_v_target,
-             acc_r_fake_source_v_source, acc_r_fake_source_recon_v_source])
 
     # ============= session =============
     sess = tf.Session()
@@ -330,7 +283,7 @@ def train():
                 target_disentangle_ind_one_hot[identity_ind, :] = 0
                 my_feed_dict = {y_t: target_labels, x_source: img, train_phase: True,
                                 y_s: labels,
-                                y_regularizer: target_disentangle_ind, y_r: target_disentangle_ind_one_hot}
+                                y_regularizer: target_disentangle_ind}
             else:
                 my_feed_dict = {y_t: target_labels, x_source: img, train_phase: True,
                                 y_s: labels}
@@ -342,16 +295,7 @@ def train():
                 writer.add_summary(summary_str, counter)
 
             if (i + 1) % generate_every_nth == 0:
-                # TODO uncomment if want to do R in a seperate step
-                # _, g_loss, g_summary_str = sess.run([G_opt, G_loss, g_sum], feed_dict=my_feed_dict)
-                # writer.add_summary(g_summary_str, counter)
-                if disentangle:
-                    _, g_loss, g_summary_str, r_loss, r_summary_str = sess.run([G_opt, G_loss, g_sum, R_loss, r_sum],
-                                                                               feed_dict=my_feed_dict)
-                    # _, r_loss, r_summary_str = sess.run([R_opt, R_loss, r_sum], feed_dict=my_feed_dict)
-                    writer.add_summary(r_summary_str, counter)
-                else:
-                    _, g_loss, g_summary_str = sess.run([G_opt, G_loss, g_sum], feed_dict=my_feed_dict)
+                _, g_loss, g_summary_str = sess.run([G_opt, G_loss, g_sum], feed_dict=my_feed_dict)
                 writer.add_summary(g_summary_str, counter)
 
             counter += 1
@@ -381,7 +325,7 @@ def train():
                     target_disentangle_ind_one_hot[identity_ind, :] = 0
                     my_feed_dict = {y_t: target_labels, x_source: img_repeat, train_phase: False,
                                     y_s: labels,
-                                    y_regularizer: target_disentangle_ind, y_r: target_disentangle_ind_one_hot}
+                                    y_regularizer: target_disentangle_ind}
                 else:
                     my_feed_dict = {y_t: target_labels, x_source: img_repeat, train_phase: False,
                                     y_s: labels}
