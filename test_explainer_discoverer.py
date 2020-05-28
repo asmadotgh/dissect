@@ -309,15 +309,4 @@ if __name__ == "__main__":
     parser.add_argument('--config', '-c', type=str)
     args = parser.parse_args()
 
-    SHAPES_SAMPLE_INDICES = [238944, 209719, 220278, 205815, 211683,
-                             245252, 255045, 258990, 259189, 273785,
-                             310989, 335740, 331129, 294386, 295864,
-                             311612, 234900, 215548, 163173, 230222,
-                             9701, 369743, 249791, 475592, 9693,
-                             14923, 15074, 327300, 38929, 327003]
-    SHAPES_IMG_LBL_DICT = './output/classifier/shapes-redcyan/explainer_input/list_attr_3_480000.txt'
-
-    test(args.config, dbg_mode=True, export_output=False, dbg_size=8, dbg_img_indices=SHAPES_SAMPLE_INDICES,
-         dbg_img_label_dict=SHAPES_IMG_LBL_DICT)
-    pdb.set_trace() #
     test(args.config)
