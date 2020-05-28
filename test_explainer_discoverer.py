@@ -103,7 +103,6 @@ def test(config_path, dbg_img_label_dict=None, dbg_mode=False, export_output=Tru
         data = np.array([str(ind) for ind in my_data_loader.tmp_list])
     else:
         data = np.asarray(list(file_names_dict.keys()))
-    pdb.set_trace()
     print("The classification categories are: ")
     print(categories)
     print('The size of the training set: ', data.shape[0])
