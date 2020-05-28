@@ -26,6 +26,9 @@ import random
 import warnings
 import argparse
 
+# The difference from train_explainer.py is that we introduce a
+# regularizer to tease apart which knob shifted.
+
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 
@@ -88,9 +91,7 @@ def train():
     lambda_cls = config['lambda_cls']
     save_summary = int(config['save_summary'])
     ckpt_dir_continue = config['ckpt_dir_continue']
-    # there is a main knob, at index k_dim, and k_dim disentangled knobs at indices 0..k_dim-1
     k_dim = config['k_dim']
-    k_dim_plus = k_dim + 1
     lambda_r = config['lambda_r']
     disentangle = k_dim > 1
     discriminate_evert_nth = config['discriminate_every_nth']
@@ -155,14 +156,11 @@ def train():
     # TODO AG, currently G conditions on a one-hot vector of size NUMS_CLASS * k_dim. Make it more efficient?
     if disentangle:
         fake_target_img, fake_target_img_embedding = G(x_source, train_phase,
-                                                       y_regularizer * NUMS_CLASS + y_target, NUMS_CLASS * k_dim_plus)
+                                                       y_regularizer * NUMS_CLASS + y_target, NUMS_CLASS * k_dim)
         fake_source_img, fake_source_img_embedding = G(fake_target_img, train_phase,
-                                                       y_regularizer * NUMS_CLASS + y_source, NUMS_CLASS * k_dim_plus)
-        fake_source_recons_img, x_source_img_embedding = G(x_source, train_phase, y_regularizer * NUMS_CLASS + y_source,
-                                                           NUMS_CLASS * k_dim_plus)
-        fake_source_main_dim_img, fake_source_main_dim_img_embedding = G(fake_target_img, train_phase,
-                                                                         k_dim * NUMS_CLASS + y_source,
-                                                                         NUMS_CLASS * k_dim_plus)
+                                                       y_regularizer * NUMS_CLASS + y_source, NUMS_CLASS * k_dim)
+        fake_source_recons_img, x_source_img_embedding = G(x_source, train_phase,
+                                                           y_regularizer * NUMS_CLASS + y_source, NUMS_CLASS * k_dim)
     else:
         fake_target_img, fake_target_img_embedding = G(x_source, train_phase, y_target, NUMS_CLASS)
         fake_source_img, fake_source_img_embedding = G(fake_target_img, train_phase, y_source, NUMS_CLASS)
@@ -182,8 +180,7 @@ def train():
     def _safe_log(inp):
         EPS = 1e-10
         return tf.math.log(inp + EPS)
-
-    real_p = tf.cast(y_target, tf.float32) * 1.0 / float(NUMS_CLASS)
+    real_p = tf.cast(y_target, tf.float32) * 1.0/float(NUMS_CLASS)
     fake_q = fake_img_cls_prediction[:, target_class]
     fake_evaluation = (real_p * _safe_log(fake_q)) + ((1 - real_p) * _safe_log(1 - fake_q))
     fake_evaluation = -tf.reduce_mean(fake_evaluation)
@@ -201,16 +198,13 @@ def train():
         regularizer_fake_target_v_source_logits = R(tf.concat([x_source, fake_target_img], axis=-1), k_dim)
         regularizer_fake_source_v_target_logits = R(tf.concat([fake_target_img, fake_source_img], axis=-1), k_dim)
         regularizer_fake_source_v_source_logits = R(tf.concat([x_source, fake_source_img], axis=-1), k_dim)
-        # TODO: due to memory problems, regularizer_fake_source_recon_v_source_logits is removed from disentangler loss
-        #  because this seems to be the easiest task to do
-        # regularizer_fake_source_recon_v_source_logits = R(tf.concat([x_source, fake_source_recons_img], axis=-1), k_dim)
+        regularizer_fake_source_recon_v_source_logits = R(tf.concat([x_source, fake_source_recons_img], axis=-1), k_dim)
 
     # ============= Loss =============
     D_loss_GAN, D_acc, D_precision, D_recall = discriminator_loss('hinge', real_source_logits, fake_target_logits)
     G_loss_GAN = generator_loss('hinge', fake_target_logits)
     G_loss_cyc = l1_loss(x_source, fake_source_img)
-    G_loss_rec = l2_loss(x_source_img_embedding,
-                         fake_source_img_embedding)  # +  l1_loss(x_source, fake_source_recons_img)
+    G_loss_rec = l1_loss(x_source, fake_source_recons_img)  #+l2_loss(x_source_img_embedding, fake_source_img_embedding)
     D_loss = (D_loss_GAN * lambda_GAN)
     D_opt = tf.train.AdamOptimizer(2e-4, beta1=0., beta2=0.9).minimize(D_loss, var_list=D.var_list())
 
@@ -221,16 +215,9 @@ def train():
             regularizer_fake_source_v_target_logits, y_r)
         R_fake_source_v_source_loss, R_fake_source_v_source_acc = contrastive_regularizer_loss(
             regularizer_fake_source_v_source_logits, y_r_0)
-        # R_fake_source_recon_v_source_loss, R_fake_source_recon_v_source_acc = contrastive_regularizer_loss(
-        #     regularizer_fake_source_recon_v_source_logits, y_r_0)
-
-        # If the main dimension is selected, no disentanglement is happening
-        # Note that because of the way the training batches are passed,
-        # batches are either all main_dim or all non main_dim
-        R_loss_main_dim_cyc = l1_loss(x_source, fake_source_main_dim_img)
-        diesntangle_cond = 1 - tf.cast(tf.math.equal(y_regularizer, k_dim), tf.float32)
-        # R_loss = tf.reduce_mean(diesntangle_cond * (R_fake_target_v_source_loss + R_fake_source_v_target_loss + R_fake_source_v_source_loss + R_fake_source_recon_v_source_loss + R_loss_main_dim_cyc))
-        R_loss = tf.reduce_mean(diesntangle_cond * (R_fake_target_v_source_loss + R_fake_source_v_target_loss + R_fake_source_v_source_loss + R_loss_main_dim_cyc))
+        R_fake_source_recon_v_source_loss, R_fake_source_recon_v_source_acc = contrastive_regularizer_loss(
+            regularizer_fake_source_recon_v_source_logits, y_r_0)
+        R_loss = R_fake_target_v_source_loss + R_fake_source_v_target_loss + R_fake_source_v_source_loss + R_fake_source_recon_v_source_loss
         R_opt = tf.train.AdamOptimizer(2e-4, beta1=0., beta2=0.9).minimize(R_loss * lambda_r, var_list=R.var_list())
         G_loss = (G_loss_GAN * lambda_GAN) + (G_loss_rec * lambda_cyc) + (G_loss_cyc * lambda_cyc) + (
                 fake_evaluation * lambda_cls) + (recons_evaluation * lambda_cls) + (R_loss * lambda_r)
@@ -265,39 +252,24 @@ def train():
     d_sum = tf.summary.merge([loss_d_sum, loss_d_GAN_sum, acc_d, precision_d, recall_d])
     # Disentangler Contrastive Regularizer losses
     if disentangle:
-        loss_r_fake_target_v_source = tf.summary.scalar('disentangler/loss_r_fake_target_v_source',
-                                                        R_fake_target_v_source_loss)
-        loss_r_fake_source_v_target = tf.summary.scalar('disentangler/loss_r_fake_source_v_target',
-                                                        R_fake_source_v_target_loss)
-        loss_r_fake_source_v_source = tf.summary.scalar('disentangler/loss_r_fake_source_v_source',
-                                                        R_fake_source_v_source_loss)
-        # loss_r_fake_source_recon_v_source = tf.summary.scalar('disentangler/loss_r_fake_source_recon_v_source',
-        #                                                       R_fake_source_recon_v_source_loss)
-        loss_r_main_dim_cyc = tf.summary.scalar('disentangler/loss_r_main_dim_cyc',
-                                                R_loss_main_dim_cyc)
+        loss_r_fake_target_v_source = tf.summary.scalar('disentangler/loss_r_fake_target_v_source', R_fake_target_v_source_loss)
+        loss_r_fake_source_v_target = tf.summary.scalar('disentangler/loss_r_fake_source_v_target', R_fake_source_v_target_loss)
+        loss_r_fake_source_v_source = tf.summary.scalar('disentangler/loss_r_fake_source_v_source', R_fake_source_v_source_loss)
+        loss_r_fake_source_recon_v_source = tf.summary.scalar('disentangler/loss_r_fake_source_recon_v_source', R_fake_source_recon_v_source_loss)
         loss_r_sum = tf.summary.scalar('disentangler/loss_r', R_loss)
 
-        acc_r_fake_target_v_source = tf.summary.scalar('disentangler/acc_r_fake_target_v_source',
-                                                       R_fake_target_v_source_acc)
-        acc_r_fake_source_v_target = tf.summary.scalar('disentangler/acc_r_fake_source_v_target',
-                                                       R_fake_source_v_target_acc)
-        acc_r_fake_source_v_source = tf.summary.scalar('disentangler/acc_r_fake_source_v_source',
-                                                       R_fake_source_v_source_acc)
-        # acc_r_fake_source_recon_v_source = tf.summary.scalar('disentangler/acc_r_fake_source_recon_v_source',
-        #                                                      R_fake_source_recon_v_source_acc)
-        # r_sum = tf.summary.merge(
-        #         #     [loss_r_sum, loss_r_fake_target_v_source, loss_r_fake_source_v_target, loss_r_fake_source_v_source,
-        #         #      loss_r_fake_source_recon_v_source, acc_r_fake_target_v_source, acc_r_fake_source_v_target,
-        #         #      acc_r_fake_source_v_source, acc_r_fake_source_recon_v_source, loss_r_main_dim_cyc])
+        acc_r_fake_target_v_source = tf.summary.scalar('disentangler/acc_r_fake_target_v_source', R_fake_target_v_source_acc)
+        acc_r_fake_source_v_target = tf.summary.scalar('disentangler/acc_r_fake_source_v_target', R_fake_source_v_target_acc)
+        acc_r_fake_source_v_source = tf.summary.scalar('disentangler/acc_r_fake_source_v_source', R_fake_source_v_source_acc)
+        acc_r_fake_source_recon_v_source = tf.summary.scalar('disentangler/acc_r_fake_source_recon_v_source', R_fake_source_recon_v_source_acc)
         r_sum = tf.summary.merge(
             [loss_r_sum, loss_r_fake_target_v_source, loss_r_fake_source_v_target, loss_r_fake_source_v_source,
-             acc_r_fake_target_v_source, acc_r_fake_source_v_target,
-             acc_r_fake_source_v_source, loss_r_main_dim_cyc])
+             loss_r_fake_source_recon_v_source, acc_r_fake_target_v_source, acc_r_fake_source_v_target,
+             acc_r_fake_source_v_source, acc_r_fake_source_recon_v_source])
 
     # ============= session =============
-    sess_opt = tf.RunOptions(report_tensor_allocations_upon_oom=True)
     sess = tf.Session()
-    sess.run(tf.global_variables_initializer(), options=sess_opt)
+    sess.run(tf.global_variables_initializer())
     saver = tf.train.Saver()
 
     writer = tf.summary.FileWriter(log_dir, sess.graph)
@@ -351,41 +323,30 @@ def train():
 
             if disentangle:
                 target_disentangle_ind = np.random.randint(0, high=k_dim, size=BATCH_SIZE)
-                target_disentangle_ind_one_hot = np.eye(k_dim_plus)[target_disentangle_ind][:, 0:k_dim]
+                target_disentangle_ind_one_hot = np.eye(k_dim)[target_disentangle_ind]
                 target_disentangle_ind_one_hot[identity_ind, :] = 0
                 my_feed_dict = {y_t: target_labels, x_source: img, train_phase: True,
                                 y_s: labels,
                                 y_regularizer: target_disentangle_ind, y_r: target_disentangle_ind_one_hot}
-
-                target_main_dim_disentangle_ind = np.array([k_dim]*BATCH_SIZE)
-                target_main_dim_disentangle_ind_one_hot = np.zeros_like(target_disentangle_ind_one_hot)
-                main_dim_feed_dict = {y_t: target_labels, x_source: img, train_phase: True, y_s: labels,
-                                      y_regularizer: target_main_dim_disentangle_ind,
-                                      y_r: target_main_dim_disentangle_ind_one_hot}
             else:
                 my_feed_dict = {y_t: target_labels, x_source: img, train_phase: True,
                                 y_s: labels}
 
             if (i + 1) % discriminate_evert_nth == 0:
+
                 _, d_loss, summary_str = sess.run([D_opt, D_loss, d_sum],
-                                                  feed_dict=my_feed_dict, options=sess_opt)
+                                                  feed_dict=my_feed_dict)
                 writer.add_summary(summary_str, counter)
 
             if (i + 1) % generate_every_nth == 0:
                 if disentangle:
                     _, g_loss, g_summary_str, r_loss, r_summary_str = sess.run([G_opt, G_loss, g_sum, R_loss, r_sum],
-                                                                               feed_dict=my_feed_dict, options=sess_opt)
+                                                                               feed_dict=my_feed_dict)
+                    # _, r_loss, r_summary_str = sess.run([R_opt, R_loss, r_sum], feed_dict=my_feed_dict)
                     writer.add_summary(r_summary_str, counter)
-                    writer.add_summary(g_summary_str, counter)
-
-                    _, g_loss, g_summary_str, r_loss, r_summary_str = sess.run([G_opt, G_loss, g_sum, R_loss, r_sum],
-                                                                               feed_dict=main_dim_feed_dict,
-                                                                               options=sess_opt)
-                    writer.add_summary(r_summary_str, counter+0.5)
-                    writer.add_summary(g_summary_str, counter+0.5)
                 else:
-                    _, g_loss, g_summary_str = sess.run([G_opt, G_loss, g_sum], feed_dict=my_feed_dict, options=sess_opt)
-                    writer.add_summary(g_summary_str, counter)
+                    _, g_loss, g_summary_str = sess.run([G_opt, G_loss, g_sum], feed_dict=my_feed_dict)
+                writer.add_summary(g_summary_str, counter)
 
             counter += 1
 
@@ -396,21 +357,21 @@ def train():
                                                                     file_names_dict=file_names_dict,
                                                                     input_size=input_size, num_channel=channels,
                                                                     do_center_crop=True)
-                labels = np.repeat(labels, NUMS_CLASS * k_dim_plus, 0)
+                labels = np.repeat(labels, NUMS_CLASS * k_dim, 0)
                 labels = labels.ravel()
                 labels = convert_ordinal_to_binary(labels, NUMS_CLASS)
-                img_repeat = np.repeat(img, NUMS_CLASS * k_dim_plus, 0)
+                img_repeat = np.repeat(img, NUMS_CLASS * k_dim, 0)
 
-                target_labels = np.asarray([np.asarray(range(NUMS_CLASS)) for j in range(num_seed_imgs * k_dim_plus)])
+                target_labels = np.asarray([np.asarray(range(NUMS_CLASS)) for j in range(num_seed_imgs * k_dim)])
                 target_labels = target_labels.ravel()
                 identity_ind = labels == target_labels
                 target_labels = convert_ordinal_to_binary(target_labels, NUMS_CLASS)
 
                 if disentangle:
                     target_disentangle_ind = np.asarray(
-                        [np.repeat(np.asarray(range(k_dim_plus)), NUMS_CLASS) for j in range(num_seed_imgs)])
+                        [np.repeat(np.asarray(range(k_dim)), NUMS_CLASS) for j in range(num_seed_imgs)])
                     target_disentangle_ind = target_disentangle_ind.ravel()
-                    target_disentangle_ind_one_hot = np.eye(k_dim_plus)[target_disentangle_ind][:, 0:k_dim]
+                    target_disentangle_ind_one_hot = np.eye(k_dim)[target_disentangle_ind]
                     target_disentangle_ind_one_hot[identity_ind, :] = 0
                     my_feed_dict = {y_t: target_labels, x_source: img_repeat, train_phase: False,
                                     y_s: labels,
@@ -420,14 +381,14 @@ def train():
                                     y_s: labels}
 
                 FAKE_IMG, fake_logits_ = sess.run([fake_target_img, fake_target_logits],
-                                                  feed_dict=my_feed_dict, options=sess_opt)
+                                                  feed_dict=my_feed_dict)
 
-                output_fake_img = np.reshape(FAKE_IMG, [-1, k_dim_plus, NUMS_CLASS, input_size, input_size, channels])
+                output_fake_img = np.reshape(FAKE_IMG, [-1, k_dim, NUMS_CLASS, input_size, input_size, channels])
 
                 # save samples
                 sample_file = os.path.join(sample_dir, '%06d.jpg' % step)
                 save_images(output_fake_img, sample_file, num_samples=num_seed_imgs,
-                            nums_class=NUMS_CLASS, k_dim=k_dim_plus, image_size=input_size, num_channel=channels)
+                            nums_class=NUMS_CLASS, k_dim=k_dim, image_size=input_size, num_channel=channels)
                 np.save(sample_file.split('.jpg')[0] + '_y.npy', labels)
 
             if counter % save_summary == 0:
