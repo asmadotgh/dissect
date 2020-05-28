@@ -1,6 +1,9 @@
 # This is the baseline vanilla Explainer code, extended to support multiple dimensions
 # However, nothing enforces distinctness of the "knobs"
 
+# The same effect can be achieved by running train_discoverer with lambda_r always set to zero.
+# However, this code is more memory efficient since it doesn't need to make the regularizer network
+
 import sys
 import os
 from classifier.DenseNet import pretrained_classifier as celeba_classifier
@@ -9,11 +12,9 @@ from data_loader.data_loader import CelebALoader, ShapesLoader
 
 from explainer.networks_128 import Discriminator_Ordinal as celeba_Discriminator_Ordinal
 from explainer.networks_128 import Generator_Encoder_Decoder as celeba_Generator_Encoder_Decoder
-from explainer.networks_128 import Discriminator_Contrastive as celeba_Discriminator_Contrastive
 
 from explainer.networks_64 import Discriminator_Ordinal as shapes_Discriminator_Ordinal
 from explainer.networks_64 import Generator_Encoder_Decoder as shapes_Generator_Encoder_Decoder
-from explainer.networks_64 import Discriminator_Contrastive as shapes_Discriminator_Contrastive
 
 import tensorflow.contrib.slim as slim
 import tensorflow as tf
@@ -190,8 +191,7 @@ def train():
     D_loss_GAN, D_acc, D_precision, D_recall = discriminator_loss('hinge', real_source_logits, fake_target_logits)
     G_loss_GAN = generator_loss('hinge', fake_target_logits)
     G_loss_cyc = l1_loss(x_source, fake_source_img)
-    G_loss_rec = l2_loss(x_source_img_embedding,
-                         fake_source_img_embedding)  # +  l1_loss(x_source, fake_source_recons_img)
+    G_loss_rec = l1_loss(x_source, fake_source_recons_img)  #+l2_loss(x_source_img_embedding, fake_source_img_embedding)
     D_loss = (D_loss_GAN * lambda_GAN)
     D_opt = tf.train.AdamOptimizer(2e-4, beta1=0., beta2=0.9).minimize(D_loss, var_list=D.var_list())
 
