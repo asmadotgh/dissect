@@ -101,7 +101,7 @@ def test(config):
         num_batch = int(data.shape[0] / BATCH_SIZE)
         for i in range(0, num_batch):
             start = i * BATCH_SIZE
-            ns = data_train[start:start + BATCH_SIZE]
+            ns = data[start:start + BATCH_SIZE]
             xs, ys = my_data_loader.load_images_and_labels(ns, image_dir=config['image_dir'], n_class=N_CLASSES,
                                                            file_names_dict=file_names_dict, input_size=input_size,
                                                            num_channel=channels, do_center_crop=True)
