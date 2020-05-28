@@ -1,5 +1,4 @@
 import sys
-import os
 import math
 from classifier.DenseNet import pretrained_classifier as celeba_classifier
 from classifier.SimpleNet import pretrained_classifier as shapes_classifier
@@ -7,23 +6,15 @@ from data_loader.data_loader import CelebALoader, ShapesLoader
 
 from explainer.networks_128 import Discriminator_Ordinal as celeba_Discriminator_Ordinal
 from explainer.networks_128 import Generator_Encoder_Decoder as celeba_Generator_Encoder_Decoder
-from explainer.networks_128 import Discriminator_Contrastive as celeba_Discriminator_Contrastive
 
 from explainer.networks_64 import Discriminator_Ordinal as shapes_Discriminator_Ordinal
 from explainer.networks_64 import Generator_Encoder_Decoder as shapes_Generator_Encoder_Decoder
-from explainer.networks_64 import Discriminator_Contrastive as shapes_Discriminator_Contrastive
 
 import tensorflow.contrib.slim as slim
-import tensorflow as tf
-import numpy as np
 from utils import *
 from losses import *
 import pdb
 import yaml
-import time
-import scipy.io as sio
-from datetime import datetime
-import random
 import warnings
 import argparse
 
@@ -60,46 +51,40 @@ def test(config_path, dbg_mode=False, export_output=True, dbg_size=10):
     # ============= Experiment Parameters =============
     ckpt_dir_cls = config['cls_experiment']
     BATCH_SIZE = config['batch_size']
-    EPOCHS = config['epochs']
     channels = config['num_channel']
     input_size = config['input_size']
     NUMS_CLASS_cls = config['num_class']
     NUMS_CLASS = config['num_bins']
-    target_class = config['target_class']
-    lambda_GAN = config['lambda_GAN']
-    lambda_cyc = config['lambda_cyc']
-    lambda_cls = config['lambda_cls']
-    save_summary = int(config['save_summary'])
     ckpt_dir_continue = ckpt_dir
     # there is a main knob, at index k_dim, and k_dim disentangled knobs at indices 0..k_dim-1
     k_dim = config['k_dim']
     k_dim_plus = k_dim + 1
-    lambda_r = config['lambda_r']
     disentangle = k_dim > 1
     if dbg_mode:
         num_samples = dbg_size
     else:
         num_samples = config['count_to_save']
 
-    discriminate_evert_nth = config['discriminate_every_nth']
-    generate_every_nth = config['generate_every_nth']
     dataset = config['dataset']
     if dataset == 'CelebA':
         pretrained_classifier = celeba_classifier
         my_data_loader = CelebALoader()
         Discriminator_Ordinal = celeba_Discriminator_Ordinal
         Generator_Encoder_Decoder = celeba_Generator_Encoder_Decoder
-        Discriminator_Contrastive = celeba_Discriminator_Contrastive
     elif dataset == 'shapes':
         pretrained_classifier = shapes_classifier
         if dbg_mode:
             my_data_loader = ShapesLoader(dbg_mode=True, dbg_size=dbg_size,
                                           dbg_image_label_dict=config['image_label_dict'])
         else:
-            my_data_loader = ShapesLoader()
+            # my_data_loader = ShapesLoader()
+            # for efficiency, let's just load as many samples as we need
+            my_data_loader = ShapesLoader(dbg_mode=True, dbg_size=num_samples,
+                                          dbg_image_label_dict=config['image_label_dict'])
+            dbg_mode = True
+
         Discriminator_Ordinal = shapes_Discriminator_Ordinal
         Generator_Encoder_Decoder = shapes_Generator_Encoder_Decoder
-        Discriminator_Contrastive = shapes_Discriminator_Contrastive
 
     # ============= Data =============
     try:
