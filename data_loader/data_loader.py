@@ -48,14 +48,18 @@ class CelebALoader(DataLoader):
 
 class ShapesLoader(DataLoader):
     def __init__(self, dbg_mode=False, dbg_size=32,
-                 dbg_image_label_dict='./output/classifier/shapes-redcolor/explainer_input/list_attr_3_5000.txt'):
+                 dbg_image_label_dict='./output/classifier/shapes-redcolor/explainer_input/list_attr_3_5000.txt',
+                 dbg_img_indices=[]):
         shapes_dir = os.path.join('data', 'shapes')
         self.dbg_mode = dbg_mode
         dataset = h5py.File(os.path.join(shapes_dir, '3dshapes.h5'), 'r')
         if self.dbg_mode:
             print('Debug mode activated. Only a few samples from the shapes datasets will be considered.')
-            _, file_names_dict = read_data_file(dbg_image_label_dict)
-            _tmp_list = list(file_names_dict.keys())[:dbg_size]
+            if len(dbg_img_indices) == 0:
+                _, file_names_dict = read_data_file(dbg_image_label_dict)
+                _tmp_list = list(file_names_dict.keys())[:dbg_size]
+            else:
+                _tmp_list = dbg_img_indices[:dbg_size]
             self.tmp_list = list(np.sort([int(ind) for ind in _tmp_list]))
             self.images = np.array(dataset['images'][self.tmp_list])
         else:

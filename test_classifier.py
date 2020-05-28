@@ -126,7 +126,7 @@ def test(config):
 
 
 def process_classifier_output(names, prediction_y, true_y, names_i, prediction_y_i, true_y_i, config, n_bins,
-                              max_samples_per_bin):
+                              max_samples_per_bin, all_samples):
     experiment_dir = os.path.join(config['log_dir'], config['name'], 'explainer_input')
     print('Saving files to: ', experiment_dir)
     if not os.path.exists(experiment_dir):
@@ -134,10 +134,13 @@ def process_classifier_output(names, prediction_y, true_y, names_i, prediction_y
 
     view_results(prediction_y, true_y, prediction_y_i, true_y_i)
     df, train_df, test_df = create_dataframe(names, prediction_y, true_y, names_i, prediction_y_i, true_y_i, n_bins)
-    plot_reliability_curve(df, 'Data-before binning', os.path.join(experiment_dir, 'before_rc'), n_bins)
-    calibrated_df = calibrated_sampling(df, n_bins, max_samples_per_bin)
-    plot_reliability_curve(calibrated_df, 'Data-after binning', os.path.join(experiment_dir, 'after_rc'), n_bins)
-    save_output(calibrated_df, train_df, test_df, experiment_dir, n_bins, max_samples_per_bin)
+    if all_samples:
+        save_output(df, train_df, test_df, experiment_dir, n_bins, max_samples_per_bin, all_samples)
+    else:
+        plot_reliability_curve(df, 'Data-before binning', os.path.join(experiment_dir, 'before_rc'), n_bins)
+        calibrated_df = calibrated_sampling(df, n_bins, max_samples_per_bin)
+        plot_reliability_curve(calibrated_df, 'Data-after binning', os.path.join(experiment_dir, 'after_rc'), n_bins)
+        save_output(calibrated_df, train_df, test_df, experiment_dir, n_bins, max_samples_per_bin, all_samples)
 
 
 def view_results(prediction_y, true_y, prediction_y_i, true_y_i):
@@ -181,7 +184,6 @@ def create_dataframe(names, prediction_y, true_y,
     print('Number of points in each bin - Test: ', np.unique(df_test_results['bin'], return_counts=True))
 
     df = pd.concat([df_train_results, df_test_results])
-    df = df.drop_duplicates()
     print('All data size: ', df.shape)
 
     return df, df_train_results, df_test_results
@@ -235,8 +237,14 @@ def calibrated_sampling(df, n_bins, n):
     return df_bin_all
 
 
-def save_output(df_bin_all, df_train_results, df_test_results, experiment_dir, n_bins, max_samples_per_bin):
-    output_fname = 'list_attr_{}_{}.txt'.format(n_bins, max_samples_per_bin)
+def save_output(df_bin_all, df_train_results, df_test_results, experiment_dir, n_bins,
+                max_samples_per_bin, all_samples):
+    if all_samples:
+        postfix = 'all'
+    else:
+        postfix = max_samples_per_bin
+
+    output_fname = 'list_attr_{}_{}.txt'.format(n_bins, postfix)
     df_temp = df_bin_all[['filename', 'bin']]
     df_temp.to_csv(os.path.join(experiment_dir, output_fname), sep=' ', index=None, header=None)
     one_line = str(df_temp.shape[0]) + '\n'
@@ -253,13 +261,13 @@ def save_output(df_bin_all, df_train_results, df_test_results, experiment_dir, n
         fp.writelines(lines)
 
     df_bin_all.to_csv(
-        os.path.join(experiment_dir, 'Data_Output_Classifier_{}_{}.csv'.format(n_bins, max_samples_per_bin)), sep=' ',
+        os.path.join(experiment_dir, 'Data_Output_Classifier_{}_{}.csv'.format(n_bins, postfix)), sep=' ',
         index=None)
     df_test_results.to_csv(
-        os.path.join(experiment_dir, 'Data_Output_Classifier_All_Test_{}_{}.csv'.format(n_bins, max_samples_per_bin)),
+        os.path.join(experiment_dir, 'Data_Output_Classifier_All_Test_{}_{}.csv'.format(n_bins, postfix)),
         sep=' ', index=None)
     df_train_results.to_csv(
-        os.path.join(experiment_dir, 'Data_Output_Classifier_All_Train_{}_{}.csv'.format(n_bins, max_samples_per_bin)),
+        os.path.join(experiment_dir, 'Data_Output_Classifier_All_Train_{}_{}.csv'.format(n_bins, postfix)),
         sep=' ', index=None)
 
 
@@ -286,6 +294,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', '-c', type=str)
     parser.add_argument('--n_bins', '-nb', type=int, default=10)
+    parser.add_argument('--all_samples', '-all', action='store_true')
     parser.add_argument('--max_samples_per_bin', '-ms', type=int, default=5000)
     args = parser.parse_args()
     # ============= Load config =============
@@ -300,4 +309,4 @@ if __name__ == "__main__":
         train_names, train_prediction_y, train_true_y, test_names, test_prediction_y, test_true_y = test(config)
         pass
     process_classifier_output(train_names, train_prediction_y, train_true_y, test_names, test_prediction_y,
-                              test_true_y, config, args.n_bins, args.max_samples_per_bin)
+                              test_true_y, config, args.n_bins, args.max_samples_per_bin, args.all_samples)
