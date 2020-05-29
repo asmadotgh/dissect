@@ -374,7 +374,7 @@ if __name__ == "__main__":
     config = yaml.load(open(args.config))
     print(config)
 
-    out_dir = os.path.join(config['log_dir'], config['name'], 'test', 'metrics')
+    out_dir = os.path.join(config['log_dir'], config['name'], 'test')
 
     try:
         results_dict = get_results_from_file(out_dir)
@@ -383,4 +383,5 @@ if __name__ == "__main__":
         results_dict = test(args.config)
         pass
 
-    evaluate(results_dict, config, output_dir=out_dir)
+    metrics_dir = os.path.join(out_dir, 'metrics')
+    evaluate(results_dict, config, output_dir=metrics_dir)
