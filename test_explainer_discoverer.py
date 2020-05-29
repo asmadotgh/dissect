@@ -6,9 +6,11 @@ from data_loader.data_loader import CelebALoader, ShapesLoader
 
 from explainer.networks_128 import Discriminator_Ordinal as celeba_Discriminator_Ordinal
 from explainer.networks_128 import Generator_Encoder_Decoder as celeba_Generator_Encoder_Decoder
+from explainer.networks_128 import get_embedding_size as celeba_embedding_size
 
 from explainer.networks_64 import Discriminator_Ordinal as shapes_Discriminator_Ordinal
 from explainer.networks_64 import Generator_Encoder_Decoder as shapes_Generator_Encoder_Decoder
+from explainer.networks_64 import get_embedding_size as shapes_embedding_size
 
 import tensorflow.contrib.slim as slim
 from utils import *
@@ -72,11 +74,13 @@ def test(config_path, dbg_img_label_dict=None, dbg_mode=False, export_output=Tru
 
     dataset = config['dataset']
     if dataset == 'CelebA':
+        EMBEDDING_SIZE = celeba_embedding_size()
         pretrained_classifier = celeba_classifier
         my_data_loader = CelebALoader()
         Discriminator_Ordinal = celeba_Discriminator_Ordinal
         Generator_Encoder_Decoder = celeba_Generator_Encoder_Decoder
     elif dataset == 'shapes':
+        EMBEDDING_SIZE = shapes_embedding_size()
         pretrained_classifier = shapes_classifier
         if dbg_mode:
             my_data_loader = ShapesLoader(dbg_mode=True, dbg_size=dbg_size,
@@ -190,35 +194,28 @@ def test(config_path, dbg_img_label_dict=None, dbg_mode=False, export_output=Tru
     print(ckpt_dir_cls, ckpt_name)
 
     # ============= Testing =============
-    def _safe_append(all_arr, curr_arr, axis=0):
-        if np.size(all_arr) == 0:
-            res = curr_arr
-        else:
-            res = np.append(all_arr, curr_arr, axis=axis)
-        return res
+    def _save_output_array(name, values):
+        np.save(os.path.join(test_dir, '{}.npy'.format(name)), values)
 
-    def _save_output_arrays(out_dict):
-        for fname in out_dict:
-            np.save(os.path.join(test_dir, '{}.npy'.format(fname)), out_dict[fname])
+    names = np.empty([num_samples])
+    real_imgs = np.empty([num_samples, input_size, input_size, channels])
+    fake_t_imgs = np.empty([num_samples * generation_dim * NUMS_CLASS, input_size, input_size, channels])
+    fake_t_embeds = np.empty([num_samples * generation_dim * NUMS_CLASS] + EMBEDDING_SIZE)
+    fake_s_imgs = np.empty([num_samples * generation_dim * NUMS_CLASS, input_size, input_size, channels])
+    fake_s_embeds = np.empty([num_samples * generation_dim * NUMS_CLASS] + EMBEDDING_SIZE)
+    fake_s_recon_imgs = np.empty([num_samples * generation_dim * NUMS_CLASS, input_size, input_size, channels])
+    s_embeds = np.empty([num_samples * generation_dim * NUMS_CLASS] + EMBEDDING_SIZE)
+    real_ps = np.empty([num_samples * generation_dim * NUMS_CLASS, NUMS_CLASS_cls])
+    recon_ps = np.empty([num_samples * generation_dim * NUMS_CLASS, NUMS_CLASS_cls])
+    fake_target_ps = np.empty([num_samples * generation_dim * NUMS_CLASS])
+    fake_ps = np.empty([num_samples * generation_dim * NUMS_CLASS, NUMS_CLASS_cls])
 
-    _empty_arr = np.empty([0])
-    names = _empty_arr
-    real_imgs = _empty_arr
-    fake_t_imgs = _empty_arr
-    fake_t_embeds = _empty_arr
-    fake_s_imgs = _empty_arr
-    fake_s_embeds = _empty_arr
-    fake_s_recon_imgs = _empty_arr
-    s_embeds = _empty_arr
-    real_ps = _empty_arr
-    recon_ps = _empty_arr
-    fake_target_ps = _empty_arr
-    fake_ps = _empty_arr
+    arrs_to_save = ['names', 'real_imgs', 'fake_t_imgs', 'fake_t_embeds', 'fake_s_imgs', 'fake_s_embeds',
+                    'fake_s_recon_imgs', 's_embeds', 'real_ps', 'recon_ps', 'fake_target_ps', 'fake_ps']
     if HAS_MAIN_DIM:
-        fake_s_main_dim_imgs = _empty_arr
-        fake_s_main_dim_embeds = _empty_arr
-
-    output_dict = {}
+        fake_s_main_dim_imgs = np.empty([num_samples * generation_dim * NUMS_CLASS, input_size, input_size, channels])
+        fake_s_main_dim_embeds = np.empty([num_samples * generation_dim * NUMS_CLASS] + EMBEDDING_SIZE)
+        arrs_to_save += ['fake_s_main_dim_imgs', 'fake_s_main_dim_embeds']
 
     np.random.shuffle(data)
 
@@ -265,38 +262,36 @@ def test(config_path, dbg_img_label_dict=None, dbg_mode=False, export_output=Tru
             [fake_source_main_dim_img, fake_source_main_dim_img_embedding],
             feed_dict=my_feed_dict)
 
-        names = _safe_append(names, np.asarray(image_paths), axis=0)
-        real_imgs = _safe_append(real_imgs, img, axis=0)
-        fake_t_imgs = _safe_append(fake_t_imgs, fake_t_img, axis=0)
-        fake_t_embeds = _safe_append(fake_t_embeds, fake_t_embed, axis=0)
-        fake_s_imgs = _safe_append(fake_s_imgs, fake_s_img, axis=0)
-        fake_s_embeds = _safe_append(fake_s_embeds, fake_s_embed, axis=0)
-        fake_s_recon_imgs = _safe_append(fake_s_recon_imgs, fake_s_recon_img, axis=0)
-        s_embeds = _safe_append(s_embeds, s_embed, axis=0)
-        real_ps = _safe_append(real_ps, real_p, axis=0)
-        recon_ps = _safe_append(recon_ps, recon_p, axis=0)
-        fake_target_ps = _safe_append(fake_target_ps, fake_target_p, axis=0)
-        fake_ps = _safe_append(fake_ps, fake_p, axis=0)
+        start_ind = i * BATCH_SIZE
+        end_ind = (i + 1) * BATCH_SIZE
+        multiplier = generation_dim * NUMS_CLASS
+        names[start_ind: end_ind] = np.asarray(image_paths)
 
-        output_dict.update({'names': names, 'real_imgs': real_imgs,
-                            'fake_t_imgs': fake_t_imgs, 'fake_t_embeds': fake_t_embeds,
-                            'fake_s_imgs': fake_s_imgs, 'fake_s_embeds': fake_s_embeds,
-                            'fake_s_recon_imgs': fake_s_recon_imgs, 's_embeds': s_embeds,
-                            'real_ps': real_ps, 'recon_ps': recon_ps,
-                            'fake_target_ps': fake_target_ps, 'fake_ps': fake_ps})
+        real_imgs[start_ind: end_ind] = img
+        fake_t_imgs[start_ind*multiplier: end_ind*multiplier] = fake_t_img
+        fake_t_embeds[start_ind*multiplier: end_ind*multiplier] = fake_t_embed
+        fake_s_imgs[start_ind*multiplier: end_ind*multiplier] = fake_s_img
+        fake_s_embeds[start_ind*multiplier: end_ind*multiplier] = fake_s_embed
+        fake_s_recon_imgs[start_ind*multiplier: end_ind*multiplier] = fake_s_recon_img
+        s_embeds[start_ind*multiplier: end_ind*multiplier] = s_embed
+        real_ps[start_ind*multiplier: end_ind*multiplier] = real_p
+        recon_ps[start_ind*multiplier: end_ind*multiplier] = recon_p
+        fake_target_ps[start_ind*multiplier: end_ind*multiplier] = fake_target_p
+        fake_ps[start_ind*multiplier: end_ind*multiplier] = fake_p
 
         if HAS_MAIN_DIM:
-            fake_s_main_dim_imgs = _safe_append(fake_s_main_dim_imgs, fake_s_main_dim_img, axis=0)
-            fake_s_main_dim_embeds = _safe_append(fake_s_main_dim_embeds, fake_s_main_dim_embed, axis=0)
-            output_dict.update({'fake_s_main_dim_imgs': fake_s_main_dim_imgs,
-                                'fake_s_main_dim_embeds': fake_s_main_dim_embeds})
+            fake_s_main_dim_imgs[start_ind*multiplier: end_ind*multiplier] = fake_s_main_dim_img
+            fake_s_main_dim_embeds[start_ind*multiplier: end_ind*multiplier] = fake_s_main_dim_embed
 
-        if export_output:
-            if i % 100 == 0:
-                _save_output_arrays(output_dict)
+        print('{} / {}'.format(i+1, math.ceil(data.shape[0] / BATCH_SIZE)))
 
     if export_output:
-        _save_output_arrays(output_dict)
+        for arr_name in arrs_to_save:
+            _save_output_array(arr_name, eval(arr_name))
+
+    output_dict = {}
+    for arr_name in arrs_to_save:
+        output_dict.update({arr_name: eval(arr_name)})
 
     return output_dict
 
