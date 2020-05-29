@@ -291,8 +291,6 @@ def test(config_path, dbg_img_label_dict=None, dbg_mode=False, export_output=Tru
             output_dict.update({'fake_s_main_dim_imgs': fake_s_main_dim_imgs,
                                 'fake_s_main_dim_embeds': fake_s_main_dim_embeds})
 
-        print(i)
-
         if export_output:
             if i % 100 == 0:
                 _save_output_arrays(output_dict)
