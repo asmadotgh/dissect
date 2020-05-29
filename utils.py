@@ -101,10 +101,10 @@ def save_images(img, sample_file, num_samples, nums_class, k_dim=1, image_size=1
     scm.imsave(sample_file, img)
 
 
-def calc_metrics_arr(prediction, labels):
+def calc_metrics_arr(prediction, labels, average='binary'):
     acc = accuracy_score(labels, prediction)
-    precision = precision_score(labels, prediction)
-    recall = recall_score(labels, prediction)
+    precision = precision_score(labels, prediction, average=average)
+    recall = recall_score(labels, prediction, average=average)
     return acc, precision, recall
 
 
