@@ -56,29 +56,37 @@ python test_classifier.py --config 'configs/shapes_redcolor_Classifier.yaml' --n
 python test_classifier.py --config 'configs/celebA_Smile_Classifier.yaml' --n_bins=10
 ```
 
-4. Train explainer model. The output is saved at: $log_dir$/$name$.
+4. Train discoverer model. The output is saved at: $log_dir$/$name$.
+
+```
+python train_discoverer.py --config 'configs/shapes_redcolor_Discoverer.yaml'
+
+python train_discoverer.py --config 'configs/celebA_Smile_Discoverer.yaml'
+```
+
+for baseline models:
+
 ```
 python train_explainer.py --config 'configs/shapes_redcolor_Explainer.yaml'
 
 python train_explainer.py --config 'configs/celebA_Smile_Explainer.yaml'
 ```
 
-5. Explore the trained Explanation model and see qualitative results.
+for baseline++ models:
+
 ```
-./notebooks/Test_Explainer.ipynb
+python train_explainer.py --config 'configs/shapes_redcolor_Explainer_multidim.yaml'
+
+python train_explainer.py --config 'configs/celebA_Smile_Explainer_multidim.yaml'
 ```
 
-6. Save results of the trained Explanation model for quantitative experiments.
+6. Save results of the trained Discoverer model for quantitative experiments and calculate evaluation metrics on it.
 ```
-python test_explainer.py --config 'configs/celebA_Smile_Explainer.yaml'
-```
-
-7. Use the saved results to perform experiments as shown in paper
-```
-./notebooks/Experiment_CelebA.ipynb 
+python evaluate_explainer_discoverer.py --config 'configs/celebA_Smile_Explainer.yaml'
 ```
 
-## Other
+
+## Other (old repo - not using now)
 If you want to follow where they get downloaded form and interactively see the data for CelebA: CelebA dataset is downloaded and saved at ./data/CelebA. IPython notebook creates text files with file names and labels and save them at ./data/CelebA/. These text files are used as input data to train the classifier.
 ```
 ./notebooks/Data_Processing.ipynb
@@ -93,6 +101,11 @@ To interactively process the output of the classifier and create input for Expla
 The input data for the Explanation model is saved at: $log_dir$/$name$/explainer_input/
 ```
 ./notebooks/Process_Classifier_Output.ipynb
+```
+
+Use the saved results to perform experiments as shown in paper
+```
+./notebooks/Experiment_CelebA.ipynb 
 ```
 
 # Cite
