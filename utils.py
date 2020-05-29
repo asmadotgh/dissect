@@ -8,6 +8,7 @@ import os
 from glob import glob
 from collections import namedtuple
 import tensorflow as tf
+from sklearn.metrics import accuracy_score, precision_score, recall_score
 
 
 def crop_center(img, cropx, cropy):
@@ -100,7 +101,15 @@ def save_images(img, sample_file, num_samples, nums_class, k_dim=1, image_size=1
     scm.imsave(sample_file, img)
 
 
+def calc_metrics_arr(prediction, labels):
+    acc = accuracy_score(labels, prediction)
+    precision = precision_score(labels, prediction)
+    recall = recall_score(labels, prediction)
+    return acc, precision, recall
+
+
 def calc_accuracy(prediction, labels):
+    # even for a binary classification, we have two classes, hence complexity of this
     acc = tf.reduce_mean(tf.cast(
         tf.equal(tf.reduce_sum(tf.cast(tf.equal(tf.math.round(prediction), labels), dtype=tf.int32), axis=1),
                  tf.shape(labels)[1]), tf.float32)) * 100.0
