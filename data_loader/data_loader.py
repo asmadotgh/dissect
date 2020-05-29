@@ -54,7 +54,7 @@ class ShapesLoader(DataLoader):
         self.dbg_mode = dbg_mode
         dataset = h5py.File(os.path.join(shapes_dir, '3dshapes.h5'), 'r')
         if self.dbg_mode:
-            print('Debug mode activated. Only a few samples from the shapes datasets will be considered.')
+            print('Debug mode activated. #{} samples from the shapes dataset will be considered.'.format(dbg_size))
             if len(dbg_img_indices) == 0:
                 _, file_names_dict = read_data_file(dbg_image_label_dict)
                 _tmp_list = list(file_names_dict.keys())[:dbg_size]
