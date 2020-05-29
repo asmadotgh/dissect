@@ -6,6 +6,10 @@ from tensorflow.contrib.layers import flatten
 import pdb
 
 
+def get_embedding_size():
+    return [8, 8, 1024]
+
+
 class Generator_Encoder_Decoder:
     def __init__(self, name='GAN'):
         self.name = name
