@@ -21,6 +21,13 @@ def dataset_split(all_images, output_dir):
     np.save(os.path.join(output_dir, 'test_ids.npy'), X_test)
 
 
+def find_single_attribute_ind(categories, attribute):
+    # attribute: Target attribute for binary classification
+    index = np.where(np.asarray(categories) == attribute)
+    index = index[0][0]
+    return index
+
+
 def find_attribute_index(categories, attribute):
     # attribute: Target attribute for binary classification
     index_main = []
@@ -109,6 +116,56 @@ def prep_celeba(attributes=[['Smiling'], ['Young'], ['No_Beard'], ['Heavy_Makeup
         read_saved_files(attribute, celebA_dir, image_dir)
 
 
+def prep_celeba_biased():
+    attribute = 'Smiling'
+    # Attribute is Smiling
+    # however, confounded with Young and Blond.
+    # Meaning that positive examples are also Young and Blond
+    # And negative examples are old and dark haired
+
+    # final paths
+    celebA_dir = os.path.join('data', 'CelebA')
+    image_dir = os.path.join(celebA_dir, 'images')
+    txt_dir = os.path.join(celebA_dir, 'list_attr_celeba.txt')
+    biased_celebA_dir = os.path.join(celebA_dir, 'biased')
+    if not os.path.exists(biased_celebA_dir):
+        os.makedirs(biased_celebA_dir)
+    print('Image Dir: ', image_dir)
+    print('Label File: ', txt_dir)
+
+    # Read Label File
+    categories, all_file_names_dict = read_data_file(txt_dir)
+    categories = np.asarray(categories).ravel()
+
+    file_names_dict = {}
+    for img in all_file_names_dict.keys():
+        smiling = all_file_names_dict[img][find_single_attribute_ind(categories, 'Smiling')]
+        young = all_file_names_dict[img][find_single_attribute_ind(categories, 'Young')]
+        blond = all_file_names_dict[img][find_single_attribute_ind(categories, 'Blond_Hair')]
+        if smiling == young and smiling == blond:
+            file_names_dict.update({img: all_file_names_dict[img]})
+    print(categories)
+
+    # Divide dataset into train and test set
+    all_images = list(file_names_dict.keys())
+
+    dataset_split(all_images, biased_celebA_dir)
+
+    print("Number of images: ", len(file_names_dict.keys()))
+
+    label = file_names_dict[list(file_names_dict.keys())[0]]
+    print(type(label))
+    label = np.asarray(label)
+    print(label.ravel())
+
+    # Create Binary-Classification Data file
+    # Convert the dictionary: attr_list to a dataframe
+    df = pd.DataFrame(file_names_dict).T
+    df['Image_Path'] = df.index
+
+    write_attribute_label_file(df, categories, [attribute], biased_celebA_dir)
+
+
 def prep_shapes(target_labels=['samecolor', 'redsamecolor', 'redcolor', 'multicolor', 'redcyan']):
     shapes_dir = os.path.join('data', 'shapes')
     dataset = h5py.File(os.path.join(shapes_dir, '3dshapes.h5'), 'r')
@@ -148,8 +205,11 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--celeba', '-c', action='store_true')
     parser.add_argument('--shapes', '-s', action='store_true')
+    parser.add_argument('--celeba_biased', '-cb', action='store_true')
     args = parser.parse_args()
     if args.shapes:
         prep_shapes()
     if args.celeba:
         prep_celeba()
+    if args.celeba_biased:
+        prep_celeba_biased()
