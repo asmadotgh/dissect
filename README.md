@@ -11,17 +11,11 @@ Official Tensorflow implementation of ICLR 2020 paper: *Explanation By Progressi
 <img src="./imgs/Quality.jpg" height="50%" width="50%" >
 
 
-### Age-Attribute Experiment
-Training graphs and qualitative results
-```
-./notebooks/Process_Classifier_Output.ipynb
-```
 
 ## Installation
 ```bash
 $ pip install -r requirements.txt
 ```
-
 
 Setup python path to include repo
 ```
@@ -33,7 +27,7 @@ python setup.py develop
 
 If you already have them downloaded, it is easier to just run:
 ```
-./python/prep_data.py
+./python/prep_data.py --shapes --celeba --celeba_biased
 ```
 
 2. Train a classifier. Skip this step if you have a pretrained classifier. The output of the classifier is saved at: $log_dir$/$name$. 
