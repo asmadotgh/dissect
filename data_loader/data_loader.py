@@ -20,20 +20,21 @@ class DataLoader:
 
 
 class CelebALoader(DataLoader):
-    def __init__(self):
+    def __init__(self, input_size=128):
         DataLoader.__init__(self)
+        self.input_size = input_size
 
-    def load_images_and_labels(self, imgs_names, image_dir, n_class, file_names_dict, input_size=128, num_channel=3,
+    def load_images_and_labels(self, imgs_names, image_dir, n_class, file_names_dict, num_channel=3,
                                do_center_crop=False):
-        imgs = np.zeros((imgs_names.shape[0], input_size, input_size, num_channel), dtype=np.float32)
+        imgs = np.zeros((imgs_names.shape[0], self.input_size, self.input_size, num_channel), dtype=np.float32)
         labels = np.zeros((imgs_names.shape[0], n_class), dtype=np.float32)
 
         for i, img_name in tqdm(enumerate(imgs_names)):
             img = scm.imread(os.path.join(image_dir, img_name))
-            if do_center_crop and input_size == 128:
+            if do_center_crop and self.input_size == 128:
                 img = crop_center(img, 150, 150)
-            img = scm.imresize(img, [input_size, input_size, num_channel])
-            img = np.reshape(img, [input_size, input_size, num_channel])
+            img = scm.imresize(img, [self.input_size, self.input_size, num_channel])
+            img = np.reshape(img, [self.input_size, self.input_size, num_channel])
             img = img / 255.0
             img = img - 0.5
             img = img * 2.0
