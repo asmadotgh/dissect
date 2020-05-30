@@ -235,6 +235,7 @@ def prep_shapes_biased():
     dataset_split(subset_inds, shapes_biased_dir)
     shape_labels_df = pd.DataFrame(data={'filenames': subset_inds,
                                          target_label: labels[subset_inds]})
+    shape_labels_df = shape_labels_df.reindex(columns=['filenames', target_label])
 
     save_processed_label_file(shape_labels_df, shapes_biased_dir, target_label)
 
