@@ -175,7 +175,6 @@ def prep_shapes(target_labels=['samecolor', 'redsamecolor', 'redcolor', 'multico
     # label_shape = labels.shape[1:]  # [6]
     n_samples = attributes.shape[0]  # 10 * 10 * 10 * 8 * 4 * 15 = 480000
 
-
     # _FACTORS_IN_ORDER = ['floor_hue', 'wall_hue', 'object_hue', 'scale', 'shape',
     #                      'orientation']
     # _NUM_VALUES_PER_FACTOR = {'floor_hue': 10, 'wall_hue': 10, 'object_hue': 10,
@@ -186,14 +185,17 @@ def prep_shapes(target_labels=['samecolor', 'redsamecolor', 'redcolor', 'multico
     dataset_split(all_images, shapes_dir)
     for target_label in target_labels:
         if target_label == 'samecolor':
-            labels = ((attributes[:, 0] == attributes[:, 1]) & (attributes[:, 0] == attributes[:, 2])).astype(np.int32)
+            labels = ((attributes[:, 0] == attributes[:, 1]) & (attributes[:, 0] == attributes[:, 2])).astype(
+                np.int32)
         elif target_label == 'redsamecolor':
             labels = ((attributes[:, 0] == attributes[:, 1]) & (attributes[:, 0] == attributes[:, 2]) & (
-                        attributes[:, 0] == 0)).astype(np.int32)
+                    attributes[:, 0] == 0)).astype(np.int32)
         elif target_label == 'redcolor':
-            labels = ((attributes[:, 0] == 0) | (attributes[:, 1] == 0) | (attributes[:, 2] == 0)).astype(np.int32)
+            labels = ((attributes[:, 0] == 0) | (attributes[:, 1] == 0) | (attributes[:, 2] == 0)).astype(
+                np.int32)
         elif target_label == 'multicolor':
-            labels = ((attributes[:, 0] == 0) | (attributes[:, 1] == 0.1) | (attributes[:, 2] == 0.2)).astype(np.int32)
+            labels = ((attributes[:, 0] == 0) | (attributes[:, 1] == 0.1) | (attributes[:, 2] == 0.2)).astype(
+                np.int32)
         elif target_label == 'redcyan':
             labels = ((attributes[:, 0] == 0.5) | (attributes[:, 2] == 0)).astype(np.int32)
         shape_labels_df = pd.DataFrame(data={'filenames': all_images, target_label: labels})
@@ -201,14 +203,53 @@ def prep_shapes(target_labels=['samecolor', 'redsamecolor', 'redcolor', 'multico
         save_processed_label_file(shape_labels_df, shapes_dir, target_label)
 
 
+def prep_shapes_biased():
+    # Target label: Floor Cyan OR shape red
+    # co occurs stocastically with wall = Yellow,
+    # i.e. more positive than negative samples have Wall=yellow
+
+    target_label = 'biasedredcyan'
+    shapes_dir = os.path.join('data', 'shapes')
+    shapes_biased_dir = os.path.join('data', 'shapes', 'biased')
+    if not os.path.exists(shapes_biased_dir):
+        os.makedirs(shapes_biased_dir)
+    dataset = h5py.File(os.path.join(shapes_dir, '3dshapes.h5'), 'r')
+    attributes = dataset['labels']  # array shape [480000, 6], float64
+    n_samples = attributes.shape[0]  # 10 * 10 * 10 * 8 * 4 * 15 = 480000
+
+    labels = (attributes[:, 0] == 0.5) | (attributes[:, 2] == 0)
+    inds_false = [i for i in range(n_samples) if not labels[i]]
+
+    labels_yellow = labels & (attributes[:, 1] == 0.2)
+    inds_true_yellow = [i for i in range(n_samples) if labels_yellow[i]]
+    true_yellow_len = len(inds_true_yellow)
+
+    labels_not_yellow = labels & (attributes[:, 1] != 0.2)
+    inds_true_not_yellow = [i for i in range(n_samples) if labels_not_yellow[i]]
+    inds_true_not_yellow_resampled = np.random.choice(inds_true_not_yellow,
+                                                      size=true_yellow_len)
+
+    subset_inds = sorted(inds_false + inds_true_yellow + list(inds_true_not_yellow_resampled))
+    labels = labels.astype(np.int32)
+    # Divide dataset into train and test set
+    dataset_split(subset_inds, shapes_biased_dir)
+    shape_labels_df = pd.DataFrame(data={'filenames': subset_inds,
+                                         target_label: labels[subset_inds]})
+
+    save_processed_label_file(shape_labels_df, shapes_biased_dir, target_label)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--celeba', '-c', action='store_true')
     parser.add_argument('--shapes', '-s', action='store_true')
     parser.add_argument('--celeba_biased', '-cb', action='store_true')
+    parser.add_argument('--shapes_biased', '-sb', action='store_true')
     args = parser.parse_args()
     if args.shapes:
         prep_shapes()
+    if args.shapes_biased:
+        prep_shapes_biased()
     if args.celeba:
         prep_celeba()
     if args.celeba_biased:
