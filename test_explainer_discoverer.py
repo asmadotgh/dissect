@@ -197,7 +197,7 @@ def test(config_path, dbg_img_label_dict=None, dbg_mode=False, export_output=Tru
     def _save_output_array(name, values):
         np.save(os.path.join(test_dir, '{}.npy'.format(name)), values)
 
-    names = np.empty([num_samples])
+    names = np.empty([num_samples], dtype=object)
     real_imgs = np.empty([num_samples, input_size, input_size, channels])
     fake_t_imgs = np.empty([num_samples * generation_dim * NUMS_CLASS, input_size, input_size, channels])
     fake_t_embeds = np.empty([num_samples * generation_dim * NUMS_CLASS] + EMBEDDING_SIZE)
