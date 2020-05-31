@@ -97,7 +97,7 @@ def test(config_path, dbg_img_label_dict=None, dbg_mode=False, export_output=Tru
         Discriminator_Ordinal = Discriminator_Ordinal_64
         Generator_Encoder_Decoder = Generator_Encoder_Decoder_64
     elif dataset == 'CelebA64':
-        embedding_size_64()
+        EMBEDDING_SIZE = embedding_size_64()
         pretrained_classifier = celeba_classifier
         my_data_loader = CelebALoader(input_size=64)
         Discriminator_Ordinal = Discriminator_Ordinal_64
