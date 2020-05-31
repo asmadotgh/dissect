@@ -4,7 +4,7 @@
 
 dataset: 'shapes'
 image_dir: '' # Not used for shapes
-image_label_dict: './data/shapes/biased/redcyan_binary_classification.txt'
+image_label_dict: './data/shapes/biased/biasedredcyan_binary_classification.txt'
 train: './data/shapes/biased/train_ids.npy'
 test: './data/shapes/biased/test_ids.npy'
 
