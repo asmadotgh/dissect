@@ -20,7 +20,7 @@ num_bins: 10
 #number of bins the output class probability between [0,1] is discretized into.
 target_class: 1
 #the class for which explanation has to be generated
-input_size: 128
+input_size: 64
 batch_size: 32
 epochs: 300
 
