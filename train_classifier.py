@@ -48,6 +48,9 @@ def train():
     elif dataset == 'shapes':
         pretrained_classifier = shapes_classifier
         my_data_loader = ShapesLoader()
+    elif dataset == 'CelebA64':
+        pretrained_classifier = celeba_classifier
+        my_data_loader = CelebALoader(input_size=64)
     if ckpt_dir_continue == '':
         continue_train = False
     else:
@@ -130,7 +133,7 @@ def train():
             start = i * BATCH_SIZE
             ns = data_train[start:start + BATCH_SIZE]
             xs, ys = my_data_loader.load_images_and_labels(ns, image_dir=config['image_dir'], n_class=N_CLASSES,
-                                                           file_names_dict=file_names_dict, input_size=input_size,
+                                                           file_names_dict=file_names_dict,
                                                            num_channel=channels, do_center_crop=True)
             [_, _loss, summary_str] = sess.run([train_step, loss, sum_train], feed_dict={x_: xs, isTrain: True, y_: ys})
             writer.add_summary(summary_str, itr_train)
@@ -149,7 +152,7 @@ def train():
             start = i * BATCH_SIZE
             ns = data_test[start:start + BATCH_SIZE]
             xs, ys = my_data_loader.load_images_and_labels(ns, image_dir=config['image_dir'], n_class=N_CLASSES,
-                                                           file_names_dict=file_names_dict, input_size=input_size,
+                                                           file_names_dict=file_names_dict,
                                                            num_channel=channels, do_center_crop=True)
             [_loss, summary_str] = sess.run([loss, sum_train], feed_dict={x_: xs, isTrain: False, y_: ys})
             writer_test.add_summary(summary_str, itr_test)

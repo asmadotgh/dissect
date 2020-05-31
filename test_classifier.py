@@ -42,6 +42,9 @@ def test(config):
     elif dataset == 'shapes':
         pretrained_classifier = shapes_classifier
         my_data_loader = ShapesLoader()
+    elif dataset == 'CelebA64':
+        pretrained_classifier = celeba_classifier
+        my_data_loader = CelebALoader(input_size=64)
     # ============= Data =============
     try:
         categories, file_names_dict = read_data_file(config['image_label_dict'])
@@ -103,7 +106,7 @@ def test(config):
             start = i * BATCH_SIZE
             ns = data[start:start + BATCH_SIZE]
             xs, ys = my_data_loader.load_images_and_labels(ns, image_dir=config['image_dir'], n_class=N_CLASSES,
-                                                           file_names_dict=file_names_dict, input_size=input_size,
+                                                           file_names_dict=file_names_dict,
                                                            num_channel=channels, do_center_crop=True)
             [_pred] = sess.run([prediction], feed_dict={x_: xs, isTrain: False, y_: ys})
             if i == 0:

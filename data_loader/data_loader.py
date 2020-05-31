@@ -13,7 +13,7 @@ class DataLoader:
     def __init__(self):
         return
 
-    def load_images_and_labels(self, imgs_names, image_dir, n_class, file_names_dict, input_size=128, num_channel=3,
+    def load_images_and_labels(self, imgs_names, image_dir, n_class, file_names_dict, num_channel=3,
                                do_center_crop=False):
         print("Error! load_images_and_labels should be overwritten in child class")
         raise NotImplementedError
@@ -51,6 +51,7 @@ class ShapesLoader(DataLoader):
     def __init__(self, dbg_mode=False, dbg_size=32,
                  dbg_image_label_dict='./output/classifier/shapes-redcolor/explainer_input/list_attr_3_5000.txt',
                  dbg_img_indices=[]):
+        self.input_size = 64
         shapes_dir = os.path.join('data', 'shapes')
         self.dbg_mode = dbg_mode
         dataset = h5py.File(os.path.join(shapes_dir, '3dshapes.h5'), 'r')
@@ -81,10 +82,9 @@ class ShapesLoader(DataLoader):
         # self.labels = (self.attributes[:, 0] == self.attributes[:, 1]) & (
         #             self.attributes[:, 0] == self.attributes[:, 2])
 
-    def load_images_and_labels(self, imgs_names, image_dir, n_class, file_names_dict, input_size=64, num_channel=3,
+    def load_images_and_labels(self, imgs_names, image_dir, n_class, file_names_dict, num_channel=3,
                                do_center_crop=False):
         assert n_class == 1
-        assert input_size == 64
         assert num_channel == 3
         del image_dir, do_center_crop
         # Currently not handling resizing etc
