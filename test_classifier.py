@@ -36,6 +36,18 @@ def test(config):
     input_size = config['input_size']
     N_CLASSES = config['num_class']
     dataset = config['dataset']
+    # in certain circumstances, for example for when classifier has been trained
+    # on re-sampled data, we want to still use the whole dataset for the generative model.
+    # That's why we produce classifier's output on the test_image_label_dict
+    if ('export_image_label_dict' in config.keys()) and ('export_train' in config.keys()) and (
+            'export_test' in config.keys()):
+        image_label_dict = config['export_image_label_dict']
+        train_ids = config['export_train']
+        test_ids = config['export_test']
+    else:
+        image_label_dict = config['image_label_dict']
+        train_ids = config['train']
+        test_ids = config['test']
     if dataset == 'CelebA':
         pretrained_classifier = celeba_classifier
         my_data_loader = CelebALoader()
@@ -47,12 +59,12 @@ def test(config):
         my_data_loader = CelebALoader(input_size=64)
     # ============= Data =============
     try:
-        categories, file_names_dict = read_data_file(config['image_label_dict'])
+        categories, file_names_dict = read_data_file(image_label_dict)
     except:
-        print("Problem in reading input data file : ", config['image_label_dict'])
+        print("Problem in reading input data file : ", image_label_dict)
         sys.exit()
-    data_train = np.load(config['train'])
-    data_test = np.load(config['test'])
+    data_train = np.load(train_ids)
+    data_test = np.load(test_ids)
     print("The classification categories are: ")
     print(categories)
     print('The size of the training set: ', data_train.shape[0])
