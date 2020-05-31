@@ -2,18 +2,18 @@
 # Classifier #
 ###########
 
-dataset: 'CelebA'
+dataset: 'CelebA64'
 image_dir: './data/CelebA/images/'
 image_label_dict: './data/CelebA/Smiling_binary_classification.txt'
 train: './data/CelebA/train_ids.npy'
 test: './data/CelebA/test_ids.npy'
 
 log_dir: './output/classifier'
-name: 'CelebA-Smile'
+name: 'CelebA64-Smile'
 
 num_channel: 3
 num_class: 1
-input_size: 128
+input_size: 64
 batch_size: 32
 epochs: 5
 ckpt_dir_continue: ''
