@@ -4,13 +4,13 @@ from classifier.DenseNet import pretrained_classifier as celeba_classifier
 from classifier.SimpleNet import pretrained_classifier as shapes_classifier
 from data_loader.data_loader import CelebALoader, ShapesLoader
 
-from explainer.networks_128 import Discriminator_Ordinal as celeba_Discriminator_Ordinal
-from explainer.networks_128 import Generator_Encoder_Decoder as celeba_Generator_Encoder_Decoder
-from explainer.networks_128 import get_embedding_size as celeba_embedding_size
+from explainer.networks_128 import Discriminator_Ordinal as Discriminator_Ordinal_128
+from explainer.networks_128 import Generator_Encoder_Decoder as Generator_Encoder_Decoder_128
+from explainer.networks_128 import get_embedding_size as embedding_size_128
 
-from explainer.networks_64 import Discriminator_Ordinal as shapes_Discriminator_Ordinal
-from explainer.networks_64 import Generator_Encoder_Decoder as shapes_Generator_Encoder_Decoder
-from explainer.networks_64 import get_embedding_size as shapes_embedding_size
+from explainer.networks_64 import Discriminator_Ordinal as Discriminator_Ordinal_64
+from explainer.networks_64 import Generator_Encoder_Decoder as Generator_Encoder_Decoder_64
+from explainer.networks_64 import get_embedding_size as embedding_size_64
 
 import tensorflow.contrib.slim as slim
 from utils import *
@@ -74,13 +74,13 @@ def test(config_path, dbg_img_label_dict=None, dbg_mode=False, export_output=Tru
 
     dataset = config['dataset']
     if dataset == 'CelebA':
-        EMBEDDING_SIZE = celeba_embedding_size()
+        EMBEDDING_SIZE = embedding_size_128()
         pretrained_classifier = celeba_classifier
         my_data_loader = CelebALoader()
-        Discriminator_Ordinal = celeba_Discriminator_Ordinal
-        Generator_Encoder_Decoder = celeba_Generator_Encoder_Decoder
+        Discriminator_Ordinal = Discriminator_Ordinal_128
+        Generator_Encoder_Decoder = Generator_Encoder_Decoder_128
     elif dataset == 'shapes':
-        EMBEDDING_SIZE = shapes_embedding_size()
+        EMBEDDING_SIZE = embedding_size_64()
         pretrained_classifier = shapes_classifier
         if dbg_mode:
             my_data_loader = ShapesLoader(dbg_mode=True, dbg_size=dbg_size,
@@ -94,8 +94,14 @@ def test(config_path, dbg_img_label_dict=None, dbg_mode=False, export_output=Tru
                                           dbg_img_indices=dbg_img_indices)
             dbg_mode = True
 
-        Discriminator_Ordinal = shapes_Discriminator_Ordinal
-        Generator_Encoder_Decoder = shapes_Generator_Encoder_Decoder
+        Discriminator_Ordinal = Discriminator_Ordinal_64
+        Generator_Encoder_Decoder = Generator_Encoder_Decoder_64
+    elif dataset == 'CelebA64':
+        embedding_size_64()
+        pretrained_classifier = celeba_classifier
+        my_data_loader = CelebALoader(input_size=64)
+        Discriminator_Ordinal = Discriminator_Ordinal_64
+        Generator_Encoder_Decoder = Generator_Encoder_Decoder_64
 
     # ============= Data =============
     try:
@@ -226,7 +232,7 @@ def test(config_path, dbg_img_label_dict=None, dbg_mode=False, export_output=Tru
         # or if the number of samples is not divisible by BATCH_SIZE a smaller value
         num_seed_imgs = np.shape(image_paths)[0]
         img, labels = my_data_loader.load_images_and_labels(image_paths, config['image_dir'], 1, file_names_dict,
-                                                            input_size, channels, do_center_crop=True)
+                                                            channels, do_center_crop=True)
         labels = np.repeat(labels, NUMS_CLASS * generation_dim, 0)
         labels = labels.ravel()
         labels = convert_ordinal_to_binary(labels, NUMS_CLASS)

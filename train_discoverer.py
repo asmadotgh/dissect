@@ -7,13 +7,13 @@ from classifier.DenseNet import pretrained_classifier as celeba_classifier
 from classifier.SimpleNet import pretrained_classifier as shapes_classifier
 from data_loader.data_loader import CelebALoader, ShapesLoader
 
-from explainer.networks_128 import Discriminator_Ordinal as celeba_Discriminator_Ordinal
-from explainer.networks_128 import Generator_Encoder_Decoder as celeba_Generator_Encoder_Decoder
-from explainer.networks_128 import Discriminator_Contrastive as celeba_Discriminator_Contrastive
+from explainer.networks_128 import Discriminator_Ordinal as Discriminator_Ordinal_128
+from explainer.networks_128 import Generator_Encoder_Decoder as Generator_Encoder_Decoder_128
+from explainer.networks_128 import Discriminator_Contrastive as Discriminator_Contrastive_128
 
-from explainer.networks_64 import Discriminator_Ordinal as shapes_Discriminator_Ordinal
-from explainer.networks_64 import Generator_Encoder_Decoder as shapes_Generator_Encoder_Decoder
-from explainer.networks_64 import Discriminator_Contrastive as shapes_Discriminator_Contrastive
+from explainer.networks_64 import Discriminator_Ordinal as Discriminator_Ordinal_64
+from explainer.networks_64 import Generator_Encoder_Decoder as Generator_Encoder_Decoder_64
+from explainer.networks_64 import Discriminator_Contrastive as Discriminator_Contrastive_64
 
 import tensorflow.contrib.slim as slim
 import tensorflow as tf
@@ -100,9 +100,9 @@ def train():
     if dataset == 'CelebA':
         pretrained_classifier = celeba_classifier
         my_data_loader = CelebALoader()
-        Discriminator_Ordinal = celeba_Discriminator_Ordinal
-        Generator_Encoder_Decoder = celeba_Generator_Encoder_Decoder
-        Discriminator_Contrastive = celeba_Discriminator_Contrastive
+        Discriminator_Ordinal = Discriminator_Ordinal_128
+        Generator_Encoder_Decoder = Generator_Encoder_Decoder_128
+        Discriminator_Contrastive = Discriminator_Contrastive_128
     elif dataset == 'shapes':
         pretrained_classifier = shapes_classifier
         if args.debug:
@@ -110,9 +110,16 @@ def train():
                                           dbg_image_label_dict=config['image_label_dict'])
         else:
             my_data_loader = ShapesLoader()
-        Discriminator_Ordinal = shapes_Discriminator_Ordinal
-        Generator_Encoder_Decoder = shapes_Generator_Encoder_Decoder
-        Discriminator_Contrastive = shapes_Discriminator_Contrastive
+        Discriminator_Ordinal = Discriminator_Ordinal_64
+        Generator_Encoder_Decoder = Generator_Encoder_Decoder_64
+        Discriminator_Contrastive = Discriminator_Contrastive_64
+    elif dataset == 'CelebA64':
+        pretrained_classifier = celeba_classifier
+        my_data_loader = CelebALoader(input_size=64)
+        Discriminator_Ordinal = Discriminator_Ordinal_64
+        Generator_Encoder_Decoder = Generator_Encoder_Decoder_64
+        Discriminator_Contrastive = Discriminator_Contrastive_64
+
     if ckpt_dir_continue == '':
         continue_train = False
     else:
@@ -310,7 +317,7 @@ def train():
             else:
                 image_paths = data[i * BATCH_SIZE:(i + 1) * BATCH_SIZE]
             img, labels = my_data_loader.load_images_and_labels(image_paths, image_dir=config['image_dir'], n_class=1,
-                                                                file_names_dict=file_names_dict, input_size=input_size,
+                                                                file_names_dict=file_names_dict,
                                                                 num_channel=channels, do_center_crop=True)
 
             labels = labels.ravel()
@@ -355,7 +362,7 @@ def train():
                 img, labels = my_data_loader.load_images_and_labels(image_paths[0:num_seed_imgs],
                                                                     image_dir=config['image_dir'], n_class=1,
                                                                     file_names_dict=file_names_dict,
-                                                                    input_size=input_size, num_channel=channels,
+                                                                    num_channel=channels,
                                                                     do_center_crop=True)
                 labels = np.repeat(labels, NUMS_CLASS * k_dim, 0)
                 labels = labels.ravel()
