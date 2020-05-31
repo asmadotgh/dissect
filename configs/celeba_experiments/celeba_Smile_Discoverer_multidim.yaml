@@ -5,7 +5,7 @@
 dataset: 'CelebA'
 # number of disentangled knobs
 k_dim: 3
-lambda_r: 20.0
+lambda_r: 2.0
 
 image_dir: './data/CelebA/images/'
 image_label_dict: './output/classifier/CelebA-Smile/explainer_input/list_attr_10_5000.txt' #path where the training data as [image name, label] is saved. Here label is the bin-index. Refer ./test_classifier.py to see how to create this file from the classifier results.
