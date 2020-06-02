@@ -112,7 +112,10 @@ def test(config_path, dbg_img_label_dict=None, dbg_mode=False, export_output=Tru
     if dbg_mode and dataset == 'shapes':
         data = np.array([str(ind) for ind in my_data_loader.tmp_list])
     else:
-        data = np.asarray(list(file_names_dict.keys()))
+        if len(dbg_img_indices) > 0:
+            data = np.asarray(dbg_img_indices)
+        else:
+            data = np.asarray(list(file_names_dict.keys()))
     print("The classification categories are: ")
     print(categories)
     print('The size of the training set: ', data.shape[0])
