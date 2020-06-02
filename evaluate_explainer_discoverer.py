@@ -10,6 +10,7 @@ from scipy.stats import entropy, pearsonr, spearmanr
 from metrics.posthoc_classification import classifier_distinct_64, classifier_realistic_64
 import tensorflow as tf
 from utils import calc_metrics_arr, calc_accuracy
+from sklearn.metrics import mean_squared_error
 import math
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
@@ -38,16 +39,17 @@ def calc_influential(results_dict, target_class):
     print('Calculating metrics for: Influential')
     p = results_dict['fake_target_ps']
     q = results_dict['fake_ps'][:, target_class]
+    MSE = mean_squared_error(p, q)
     KL = entropy(p, q)
     pearson_r, pearson_p = pearsonr(p, q)
     spearman_r, spearman_p = spearmanr(p, q)
 
     print(
-        'Influential - KL: {:.3f}, pearson_r: {:.3f}, pearson_p: {:.3f}, spearman_r: {:.3f}, spearman_p:{:.3f}'.format(
-            KL, pearson_r, pearson_p, spearman_r, spearman_p))
+        'Influential - MSE: {:.3f}, KL: {:.3f}, pearson_r: {:.3f}, pearson_p: {:.3f}, spearman_r: {:.3f}, spearman_p:{:.3f}'.format(
+            MSE, KL, pearson_r, pearson_p, spearman_r, spearman_p))
 
     metrics_dict = {}
-    for metric in ['KL', 'pearson_r', 'pearson_p', 'spearman_r', 'spearman_p']:
+    for metric in ['MSE', 'KL', 'pearson_r', 'pearson_p', 'spearman_r', 'spearman_p']:
         metrics_dict.update({'influential_{}'.format(metric): [eval(metric)]})
     print('Metrics successfully calculated: Influential')
     return metrics_dict
