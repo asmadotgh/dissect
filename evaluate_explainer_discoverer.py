@@ -129,9 +129,9 @@ def calc_distinct(results_dict):
     for v in tf.global_variables():
         lst_vars.append(v)
     # ============= Session =============
-    sess = tf.InteractiveSession()
+    sess = tf.Session()
+    sess.run(tf.global_variables_initializer())
     saver = tf.train.Saver(var_list=lst_vars)
-    tf.global_variables_initializer().run()
     writer = tf.summary.FileWriter(output_dir + '/train', sess.graph)
     writer_test = tf.summary.FileWriter(output_dir + '/test', sess.graph)
     # ============= Training =============
@@ -263,9 +263,9 @@ def calc_realistic(results_dict, config):
     for v in tf.global_variables():
         lst_vars.append(v)
     # ============= Session =============
-    sess = tf.InteractiveSession()
+    sess = tf.Session()
+    sess.run(tf.global_variables_initializer())
     saver = tf.train.Saver(var_list=lst_vars)
-    tf.global_variables_initializer().run()
     writer = tf.summary.FileWriter(output_dir + '/train', sess.graph)
     writer_test = tf.summary.FileWriter(output_dir + '/test', sess.graph)
     # ============= Training =============
@@ -356,8 +356,10 @@ def get_results_from_file(output_dir):
     if not os.path.exists(output_dir):
         raise ValueError('Directory {} does not exist.'.format(output_dir))
     # Read Explainer/Discoverer Results
-    files_to_load = ['names', 'real_imgs', 'fake_t_imgs', 'fake_t_embeds', 'fake_s_imgs', 'fake_s_embeds',
-                     'fake_s_recon_imgs', 's_embeds', 'real_ps', 'recon_ps', 'fake_target_ps', 'fake_ps']
+    # files_to_load = ['names', 'real_imgs', 'fake_t_imgs', 'fake_t_embeds', 'fake_s_imgs', 'fake_s_embeds',
+    #                  'fake_s_recon_imgs', 's_embeds', 'real_ps', 'recon_ps', 'fake_target_ps', 'fake_ps']
+    # only loading the subset needed for the analyeses:
+    files_to_load = ['real_imgs', 'fake_t_imgs', 'real_ps', 'fake_target_ps', 'fake_ps']
     results_dict = {}
     for fname in files_to_load:
         curr_file = os.path.join(output_dir, fname+'.npy')
