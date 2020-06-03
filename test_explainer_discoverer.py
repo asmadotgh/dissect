@@ -53,7 +53,10 @@ def test(config_path, dbg_img_label_dict=None, dbg_mode=False, export_output=Tru
 
     # ============= Experiment Parameters =============
     ckpt_dir_cls = config['cls_experiment']
-    BATCH_SIZE = config['batch_size']
+    if 'evaluation_batch_size' in config.keys():
+        BATCH_SIZE = config['evaluation_batch_size']
+    else:
+        BATCH_SIZE = config['batch_size']
     channels = config['num_channel']
     input_size = config['input_size']
     NUMS_CLASS_cls = config['num_class']
