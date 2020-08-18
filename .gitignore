@@ -10,4 +10,5 @@ data/*
 *egg-info/
 .idea/
 configs/*
+*.mat
 
