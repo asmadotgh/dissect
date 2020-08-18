@@ -6,6 +6,7 @@ from tensorflow.layers import flatten
 import pdb
 from explainer.ops import dense, relu, global_sum_pooling, D_Resblock, D_FirstResblock
 
+
 def classifier_realistic_64(inputs, n_label, name='realistic_classifier', isTrain=False):
     print(name, isTrain)
     with tf.variable_scope(name_or_scope=name, reuse=tf.AUTO_REUSE):

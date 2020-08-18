@@ -22,7 +22,7 @@ target_class: 1
 #the class for which explanation has to be generated
 input_size: 64
 batch_size: 32
-epochs: 1000
+epochs: 300
 
 lambda_GAN: 1
 lambda_cyc: 100
