@@ -303,14 +303,13 @@ def prep_cub():
 
 
 def prep_dermatology(target_label='inflammatory-malignant'):
-    # TODO do I need to resize images?
     dermatology_dir = os.path.join('data', 'dermatology')
     df = pd.read_csv(os.path.join(dermatology_dir, 'skindictionary.csv'))
 
     def _add_info(series):
         if not isinstance(series['label'], str):
             series['label'] = ''
-        benign_categories = ['lipoma', 'fibroma', 'cyst', 'milia',
+        BENIGN_CATEGORIES = ['lipoma', 'fibroma', 'cyst', 'milia',
                              'seborrhoeic', 'keratosis',
                              'solar', 'lentigo',
                              'cafe', 'ai', 'lait', 'spot',
@@ -318,14 +317,23 @@ def prep_dermatology(target_label='inflammatory-malignant'):
                              'bullous', 'pemphigoid',
                              'psoriasis', 'abrasion', 'rosacea', 'acne',
                              'benign']
+        OUTLIERS = ['httpwwwdermaamincomsiteimagesclinicalpicccalcifiednoduledermatomyositiscalcifiednoduledermatomyositis3jpg.jpg',
+                    'httpwwwdermaamincomsiteimagesclinicalpicmmajoccchiganulomamajoccchiganuloma9jpg.jpg'
+                    'httpwwwdermaamincomsiteimagesclinicalpicssturgewebersyndromesturgewebersyndrome3jpg.jpg',
+                    'httpwwwdermaamincomsiteimagesclinicalpicssturgewebersyndromesturgewebersyndrome5jpg.jpg'
+                    ]  # image names of BW images (most are RGB)
         series['type'] = 1              # 'malignant'
-        for keyword in benign_categories:
+        for keyword in BENIGN_CATEGORIES:
             if keyword in series['tax'] or keyword in series['label']:
                 series['type'] = -1     # 'benign'
                 break
+        if series['image_path'] in OUTLIERS:
+            series['outlier'] = True
+        series['outlier'] = False
         return series
 
     labels_df = df.apply(_add_info, axis=1)
+    labels_df = labels_df[not labels_df['outlier']]
     if target_label == 'inflammatory-malignant':
         inflammatory_df = labels_df[labels_df['tax'] == 'inflammatory'].reset_index(drop=True)
 
