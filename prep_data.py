@@ -10,6 +10,7 @@ from utils import *
 from sklearn.model_selection import train_test_split
 import h5py
 np.random.seed(0)
+import pdb;
 
 
 def dataset_split(all_images, output_dir):
@@ -295,6 +296,40 @@ def prep_shapes_biased():
     save_processed_label_file(shape_labels_df, shapes_biased_dir, target_label)
 
 
+def prep_cub():
+    # TODO reshape all images
+    # pick a label
+    return
+
+
+def prep_dermatology(target_label='inflammatory-malignant'):
+    dermatology_dir = os.path.join('data', 'dermatology')
+    df = pd.read_csv(os.path.join(dermatology_dir, 'skindictionary.csv'))
+
+    def _add_info(series):
+        if not isinstance(series['label'], str):
+            series['label'] = ''
+        benign_categories = ['lipoma', 'fibroma', 'cyst', 'milia',
+                             'seborrhoeic', 'keratosis',
+                             'solar', 'lentigo',
+                             'cafe', 'ai', 'lait', 'spot',
+                             'stevens', 'johnson',
+                             'bullous', 'pemphigoid',
+                             'psoriasis', 'abrasion', 'rosacea', 'acne',
+                             'benign']
+        series['type'] = 1              # 'malignant'
+        for keyword in benign_categories:
+            if keyword in series['tax'] or keyword in series['label']:
+                series['type'] = -1     # 'benign'
+                break
+        return series
+
+    labels_df = df.apply(_add_info, axis=1)
+    if target_label == 'inflammatory-malignant':
+        inflammatory_df = labels_df[labels_df['tax'] == 'inflammatory'].reset_index(drop=True)
+        save_processed_label_file(inflammatory_df[['image_path', 'type']], dermatology_dir, target_label)
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--celeba', '-c', action='store_true')
@@ -302,6 +337,8 @@ if __name__ == "__main__":
     parser.add_argument('--celeba_biased', '-cb', action='store_true')
     parser.add_argument('--celeba_biased_or', '-cbo', action='store_true')
     parser.add_argument('--shapes_biased', '-sb', action='store_true')
+    parser.add_argument('--cub', '-cub', action='store_true')
+    parser.add_argument('--dermatology', '-d', action='store_true')
     args = parser.parse_args()
     if args.shapes:
         prep_shapes()
@@ -313,3 +350,7 @@ if __name__ == "__main__":
         prep_celeba_biased()
     if args.celeba_biased_or:
         prep_celeba_biased_or()
+    if args.cub:
+        prep_cub()
+    if args.dermatology:
+        prep_dermatology()
