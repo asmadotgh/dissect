@@ -5,15 +5,15 @@ import pandas as pd
 import zipfile
 import argparse
 from tqdm import tqdm
-import pdb
 from utils import *
 from sklearn.model_selection import train_test_split
 import h5py
 np.random.seed(0)
-import pdb;
 
 
 def dataset_split(all_images, output_dir):
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
     X_train, X_test = train_test_split(all_images, test_size=0.33, random_state=0)
     X_train = np.asarray(X_train)
     X_test = np.asarray(X_test)
@@ -303,6 +303,7 @@ def prep_cub():
 
 
 def prep_dermatology(target_label='inflammatory-malignant'):
+    # TODO do I need to resize images?
     dermatology_dir = os.path.join('data', 'dermatology')
     df = pd.read_csv(os.path.join(dermatology_dir, 'skindictionary.csv'))
 
@@ -327,6 +328,12 @@ def prep_dermatology(target_label='inflammatory-malignant'):
     labels_df = df.apply(_add_info, axis=1)
     if target_label == 'inflammatory-malignant':
         inflammatory_df = labels_df[labels_df['tax'] == 'inflammatory'].reset_index(drop=True)
+
+        # Divide dataset into train and test set
+        all_images = list(inflammatory_df['image_path'])
+
+        dataset_split(all_images, os.path.join(dermatology_dir, target_label))
+
         save_processed_label_file(inflammatory_df[['image_path', 'type']], dermatology_dir, target_label)
 
 
