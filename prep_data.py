@@ -328,9 +328,9 @@ def prep_dermatology(target_label='inflammatory-malignant'):
             if keyword in series['tax'] or keyword in series['label']:
                 series['type'] = -1     # 'benign'
                 break
+        series['outlier'] = False
         if series['image_path'] in OUTLIERS:
             series['outlier'] = True
-        series['outlier'] = False
         return series
 
     labels_df = df.apply(_add_info, axis=1)
