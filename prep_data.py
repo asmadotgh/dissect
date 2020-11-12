@@ -320,7 +320,8 @@ def prep_dermatology(target_label='inflammatory-malignant'):
         OUTLIERS = ['httpwwwdermaamincomsiteimagesclinicalpicccalcifiednoduledermatomyositiscalcifiednoduledermatomyositis3jpg.jpg',
                     'httpwwwdermaamincomsiteimagesclinicalpicmmajoccchiganulomamajoccchiganuloma9jpg.jpg'
                     'httpwwwdermaamincomsiteimagesclinicalpicssturgewebersyndromesturgewebersyndrome3jpg.jpg',
-                    'httpwwwdermaamincomsiteimagesclinicalpicssturgewebersyndromesturgewebersyndrome5jpg.jpg'
+                    'httpwwwdermaamincomsiteimagesclinicalpicssturgewebersyndromesturgewebersyndrome5jpg.jpg',
+                    'httpdermatoweb2udlesimagesfotosgranssarna32jpg.jpg'
                     ]  # image names of BW images (most are RGB)
         series['type'] = 1              # 'malignant'
         for keyword in BENIGN_CATEGORIES:
@@ -333,7 +334,7 @@ def prep_dermatology(target_label='inflammatory-malignant'):
         return series
 
     labels_df = df.apply(_add_info, axis=1)
-    labels_df = labels_df[not labels_df['outlier']]
+    labels_df = labels_df[labels_df['outlier'] == False]
     if target_label == 'inflammatory-malignant':
         inflammatory_df = labels_df[labels_df['tax'] == 'inflammatory'].reset_index(drop=True)
 
