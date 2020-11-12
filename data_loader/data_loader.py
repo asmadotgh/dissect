@@ -97,4 +97,3 @@ class ShapesLoader(DataLoader):
             return self.images[tmp_inds], labels
         else:
             return self.images[imgs_names.astype(np.int32)], labels
-
