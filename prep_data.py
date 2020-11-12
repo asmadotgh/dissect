@@ -318,7 +318,7 @@ def prep_dermatology(target_label='inflammatory-malignant'):
                              'psoriasis', 'abrasion', 'rosacea', 'acne',
                              'benign']
         OUTLIERS = ['httpwwwdermaamincomsiteimagesclinicalpicccalcifiednoduledermatomyositiscalcifiednoduledermatomyositis3jpg.jpg',
-                    'httpwwwdermaamincomsiteimagesclinicalpicmmajoccchiganulomamajoccchiganuloma9jpg.jpg'
+                    'httpwwwdermaamincomsiteimagesclinicalpicmmajoccchiganulomamajoccchiganuloma9jpg.jpg',
                     'httpwwwdermaamincomsiteimagesclinicalpicssturgewebersyndromesturgewebersyndrome3jpg.jpg',
                     'httpwwwdermaamincomsiteimagesclinicalpicssturgewebersyndromesturgewebersyndrome5jpg.jpg',
                     'httpdermatoweb2udlesimagesfotosgranssarna32jpg.jpg'
