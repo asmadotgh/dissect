@@ -162,15 +162,10 @@ def train():
         print("Epoch: " + str(epoch) + " Test loss: " + str(total_loss) + '\n')
         test_loss.append(total_loss)
 
-        if epoch % 2 == 0:
-            checkpoint_name = os.path.join(output_dir, 'cp1_epoch' + str(epoch) + '.ckpt')
-            save_path = saver.save(sess, checkpoint_name)
-            np.save(os.path.join(output_dir, 'logs', 'train_loss.npy'), np.asarray(train_loss))
-            np.save(os.path.join(output_dir, 'logs', 'test_loss.npy'), np.asarray(test_loss))
-    checkpoint_name = os.path.join(output_dir, 'cp1_epoch' + str(epoch) + '.ckpt')
-    save_path = saver.save(sess, checkpoint_name)
-    np.save(os.path.join(output_dir, 'logs', 'train_loss.npy'), np.asarray(train_loss))
-    np.save(os.path.join(output_dir, 'logs', 'test_loss.npy'), np.asarray(test_loss))
+        checkpoint_name = os.path.join(output_dir, 'cp1_epoch' + str(epoch) + '.ckpt')
+        save_path = saver.save(sess, checkpoint_name)
+        np.save(os.path.join(output_dir, 'logs', 'train_loss.npy'), np.asarray(train_loss))
+        np.save(os.path.join(output_dir, 'logs', 'test_loss.npy'), np.asarray(test_loss))
 
 
 if __name__ == "__main__":
