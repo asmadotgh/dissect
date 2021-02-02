@@ -162,16 +162,16 @@ def train():
     real_source_logits = D(x_source, y_s, NUMS_CLASS, "NO_OPS")
     # TODO AG, currently G conditions on a one-hot vector of size NUMS_CLASS * k_dim. Make it more efficient?
     if disentangle:
-        fake_target_img, fake_target_img_embedding = G(x_source, train_phase,
+        fake_target_img, fake_target_img_embedding = G(x_source,
                                                        y_regularizer * NUMS_CLASS + y_target, NUMS_CLASS * k_dim)
-        fake_source_img, fake_source_img_embedding = G(fake_target_img, train_phase,
+        fake_source_img, fake_source_img_embedding = G(fake_target_img,
                                                        y_regularizer * NUMS_CLASS + y_source, NUMS_CLASS * k_dim)
-        fake_source_recons_img, x_source_img_embedding = G(x_source, train_phase,
+        fake_source_recons_img, x_source_img_embedding = G(x_source,
                                                            y_regularizer * NUMS_CLASS + y_source, NUMS_CLASS * k_dim)
     else:
-        fake_target_img, fake_target_img_embedding = G(x_source, train_phase, y_target, NUMS_CLASS)
-        fake_source_img, fake_source_img_embedding = G(fake_target_img, train_phase, y_source, NUMS_CLASS)
-        fake_source_recons_img, x_source_img_embedding = G(x_source, train_phase, y_source, NUMS_CLASS)
+        fake_target_img, fake_target_img_embedding = G(x_source, y_target, NUMS_CLASS)
+        fake_source_img, fake_source_img_embedding = G(fake_target_img, y_source, NUMS_CLASS)
+        fake_source_recons_img, x_source_img_embedding = G(x_source, y_source, NUMS_CLASS)
     fake_target_logits = D(fake_target_img, y_t, NUMS_CLASS, None)
 
     # ============= pre-trained classifier =============

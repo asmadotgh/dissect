@@ -81,7 +81,7 @@ def spectral_normalization(name, weights, num_iters=1, update_collection=None,
 
 
 # TODO AG different way of doing this?
-def conditional_batchnorm(x, train_phase, scope_bn, y=None, nums_class=None):
+def conditional_batchnorm(x, scope_bn, y=None, nums_class=None):
     # Batch Normalization
     # Ioffe S, Szegedy C. Batch normalization: accelerating deep network training by reducing internal covariate shift[J]. 2015:448-456.
     with tf.variable_scope(scope_bn):
@@ -144,15 +144,15 @@ def Inner_product(global_pooled, y, nums_class, update_collection=None):
     return temp
 
 
-def G_Resblock(name, inputs, nums_out, is_training, y, nums_class, update_collection=None, is_sn=False):
+def G_Resblock(name, inputs, nums_out, y, nums_class, update_collection=None, is_sn=False):
     with tf.variable_scope(name):
         temp = tf.identity(inputs)
-        inputs = conditional_batchnorm(inputs, is_training, "bn1", y, nums_class)
+        inputs = conditional_batchnorm(inputs, "bn1", y, nums_class)
         inputs = relu(inputs)
         inputs = upsampling(inputs)
         # print(name, ' upsample ', inputs)
         inputs = conv("conv1", inputs, nums_out, 3, 1, update_collection, is_sn=is_sn)
-        inputs = conditional_batchnorm(inputs, is_training, "bn2", y, nums_class)
+        inputs = conditional_batchnorm(inputs, "bn2", y, nums_class)
         inputs = relu(inputs)
         inputs = conv("conv2", inputs, nums_out, 3, 1, update_collection, is_sn=is_sn)
         # Identity mapping
@@ -161,15 +161,15 @@ def G_Resblock(name, inputs, nums_out, is_training, y, nums_class, update_collec
     return inputs + temp
 
 
-def G_Resblock_Encoder(name, inputs, nums_out, is_training, y, nums_class, update_collection=None, is_sn=False):
+def G_Resblock_Encoder(name, inputs, nums_out, y, nums_class, update_collection=None, is_sn=False):
     with tf.variable_scope(name):
         temp = tf.identity(inputs)
-        inputs = conditional_batchnorm(inputs, is_training, "bn1", y, nums_class)
+        inputs = conditional_batchnorm(inputs, "bn1", y, nums_class)
         inputs = relu(inputs)
         inputs = downsampling(inputs)
         # print(name, ' down-sample ', inputs)
         inputs = conv("conv1", inputs, nums_out, 3, 1, update_collection, is_sn=is_sn)
-        inputs = conditional_batchnorm(inputs, is_training, "bn2", y, nums_class)
+        inputs = conditional_batchnorm(inputs, "bn2", y, nums_class)
         inputs = relu(inputs)
         inputs = conv("conv2", inputs, nums_out, 3, 1, update_collection, is_sn=is_sn)
         # Identity mapping
