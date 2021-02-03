@@ -1,8 +1,9 @@
-'''
+"""
 This network is build on top of SNGAN network implementation from: https://github.com/MingtaoGuo/sngan_projection_TensorFlow.git
-'''
+"""
 import tensorflow as tf
 import tensorflow.contrib.slim as slim
+import pdb
 
 
 def upsampling(inputs):
@@ -17,6 +18,10 @@ def downsampling(inputs):
 
 def relu(inputs, name=None):
     return tf.nn.relu(inputs, name=name)
+
+
+def tanh(inputs, name=None):
+    return tf.nn.tanh(inputs, name=name)
 
 
 def _l2normalize(v, eps=1e-12):
@@ -208,3 +213,36 @@ def D_FirstResblock(name, inputs, nums_out, update_collection, is_down=True, is_
             temp = downsampling(temp)
             temp = conv("identity", temp, nums_out, 1, 1, update_collection=update_collection, is_sn=is_sn)
     return inputs + temp
+
+
+# CSVAE related blocks
+def Decoder_Block(name, inputs, nums_out):
+    with tf.variable_scope(name):
+        inputs = upsampling(inputs)
+        # print(name, ' upsample ', inputs)
+        inputs = conv("conv1", inputs, nums_out, 5, 1)
+        inputs = conditional_batchnorm(inputs, "bn1")
+        inputs = relu(inputs)
+    return inputs
+
+
+def Encoder_Block(name, inputs, nums_out):
+    with tf.variable_scope(name):
+        inputs = downsampling(inputs)
+        # print(name, ' down-sample ', inputs)
+        inputs = conv("conv1", inputs, nums_out, 5, 1)
+        inputs = conditional_batchnorm(inputs, "bn1")
+        inputs = relu(inputs)
+    return inputs
+
+
+def KL(mu1, logvar1, mu2, logvar2):
+    """
+    Calculates the KL divergence between two gaussians
+    See appendix here for a generalized version of this formula: https://arxiv.org/pdf/1312.6114.pdf
+    """
+    std1 = tf.exp(0.5 * logvar1)
+    std2 = tf.exp(0.5 * logvar2)
+    return tf.reduce_sum(
+        tf.log(std2) - tf.log(std1) + 0.5 * (tf.exp(logvar1) + (mu1 - mu2) ** 2) / tf.exp(logvar2) - 0.5,
+        axis=-1)

@@ -113,3 +113,162 @@ class Discriminator_Contrastive:
 
     def var_list(self):
         return tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, self.name)
+
+
+# CSVAE modules
+
+# One simple implementation with swiss roll data: https://github.com/kareenaaahuang/am207_final_project
+
+# CSVAE architecture: Trying to replicate the architecture used in https://arxiv.org/abs/1812.06190
+# "Our architectures consist of convolutional layers with ReLu activations which roughly follow that found in https://arxiv.org/abs/1512.09300."
+# Here is the information found in Table 1 , in "Autoencoding beyond pixels using a learned similarity metric" https://arxiv.org/abs/1512.09300
+
+# Encoder
+# 5×5 64 conv. ↓, BNorm, ReLU
+# 5×5 128 conv. ↓, BNorm, ReLU
+# 5×5 256 conv. ↓, BNorm, ReLU
+# 2048 fully-connected, BNorm, ReLU
+
+# Dec
+# 8·8·256 fully-connected, BNorm, ReLU
+# 5×5 256 conv. ↑, BNorm, ReLU
+# 5×5 128 conv. ↑, BNorm, ReLU
+# 5×5 32 conv. ↑, BNorm, ReLU
+# 5×5 3 conv., tanh
+
+
+# Discriminator [This is not applicable to our implementation, because we are not using a GAN]
+# 5×5 32 conv., ReLU
+# 5×5 128 conv. ↓, BNorm, ReLU
+# 5×5 256 conv. ↓, BNorm, ReLU
+# 5×5 256 conv. ↓, BNorm, ReLU
+# 512 fully-connected, BNorm, ReLU
+# 1 fully-connected, sigmoid
+
+# Architectures for the three networks that comprise VAE/GAN.
+# ↓ and ↑ represent down- and upsampling respectively.
+# BNorm denotes batch normalization (Ioffe & Szegedy, 2015).
+# When batch normalization is applied to convolutional layers, per-channel normalization is used.
+
+# implementation found here https://github.com/andersbll/autoencoding_beyond_pixels
+
+class EncoderZ:
+    """
+    This class transforms the images into a vector in the latent space, Z.
+    Requires input and output dimensions.
+    Example:
+    Input dimension:  [n, 64, 64, 6] images
+    Output dimension: num_dims (z_dim in the latent space)
+    """
+    def __init__(self, name='encoder_z'):
+        self.name = name
+
+    def __call__(self, inputs, num_dims):
+        with tf.variable_scope(name_or_scope=self.name, reuse=tf.AUTO_REUSE):
+            # input: [n, 64, 64, 3]
+            print(self.name)
+            print(inputs)
+            inputs = Encoder_Block("Encoder-ConvBlock3", inputs, 64)  # [n, 32, 32, 64]
+            print(':', inputs)
+            inputs = Encoder_Block("Encoder-ConvBlock2", inputs, 128)  # [n, 16, 16, 128]
+            print(':', inputs)
+            inputs = Encoder_Block("Encoder-ConvBlock1", inputs, 256)  # [n, 8, 8, 256]
+            print(':', inputs)
+            inputs = global_sum_pooling(inputs)  # [n, 256]
+            print(':', inputs)
+            inputs = dense("dense1", inputs, 2048) # [n, 256]
+            inputs = relu(inputs)
+            print(':', inputs)
+            inputs = dense("dense", inputs, 2 * num_dims)  # [n, 2*num_dims] 2 refers to mu and logvar
+            inputs = relu(inputs)
+            print(':', inputs)
+
+            mu = inputs[:, 0:num_dims]
+            logvar = inputs[:, num_dims:]
+            samples = tf.random_normal(shape=tf.shape(mu), mean=mu, stddev=tf.exp(0.5 * logvar))
+            return mu, logvar, samples
+
+    def var_list(self):
+        return tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, self.name)
+
+
+class EncoderW:
+    """
+    This class transforms the images and labels into a vector in the latent space, W.
+    Requires input and output dimensions.
+    Example:
+    Input dimension:  [n, 64, 64, 6] images , [n, 1] labels
+    Output dimension: num_dims (w_dim in the latent space)
+    """
+    def __init__(self, name='encoder_w'):
+        self.name = name
+
+    def __call__(self, inputs, labels, num_dims):
+        with tf.variable_scope(name_or_scope=self.name, reuse=tf.AUTO_REUSE):
+            # inputs: [n, 64, 64, 3], labels: [n, 1]
+            print(self.name)
+            print(inputs)
+            inputs = Encoder_Block("Encoder-ConvBlock3", inputs, 64)  # [n, 32, 32, 64]
+            print(':', inputs)
+            inputs = Encoder_Block("Encoder-ConvBlock2", inputs, 128)  # [n, 16, 16, 128]
+            print(':', inputs)
+            inputs = Encoder_Block("Encoder-ConvBlock1", inputs, 256)  # [n, 84, 8, 256]
+            print(':', inputs)
+            inputs = global_sum_pooling(inputs)  # [n, 256]
+            print(':', inputs)
+
+            inputs = tf.concat([inputs, tf.cast(tf.expand_dims(labels, -1), dtype=tf.float32)], axis=-1)  # [n, 257]
+            inputs = dense('dense2', inputs, 128)  # [n, 128]
+            inputs = relu(inputs)
+            print(':', inputs)
+            inputs = dense('dense1', inputs, 64)  # [n, 64]
+            inputs = relu(inputs)
+            print(':', inputs)
+            inputs = dense("dense", inputs, 2 * num_dims)  # [n, 2*num_dims] 2 refers to mu and logvar
+            inputs = relu(inputs)
+            print(':', inputs)
+
+            mu = inputs[:, 0:num_dims]
+            logvar = inputs[:, num_dims:]
+            samples = tf.random_normal(shape=tf.shape(mu), mean=mu, stddev=tf.exp(0.5 * logvar))
+            return mu, logvar, samples
+
+    def var_list(self):
+        return tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, self.name)
+
+
+class Decoder:
+    """
+    This class transforms the an embedding into a vector in the latent space, could be an image or reconstructed y.
+    Requires input and output dimensions.
+    Example:
+    Input dimension: 2 (latent dims from Z) + 2 (latent dims from W)
+    Output dimension: [n, 64, 64, 3] original image data
+    """
+
+    def __init__(self, name='decoder'):  # Initialize with decoder_x or decoder_y
+        self.name = name
+
+    def __call__(self, inputs, num_dims):
+        with tf.variable_scope(name_or_scope=self.name, reuse=tf.AUTO_REUSE):
+            # input: [n, 64, 64, 6]
+
+            print(self.name)
+            inputs = relu(inputs)
+            inputs = dense('dense1', inputs, 8*8*256)
+            inputs = tf.reshape(inputs, [-1, 8, 8, 256])
+
+            inputs = Decoder_Block("Decoder-ConvBlock1", inputs, 256)  # [n, 16, 16, 256]
+            print(':', inputs)
+            inputs = Decoder_Block("Decoder-ConvBlock2", inputs, 128)  # [n, 32, 32, 128]
+            print(':', inputs)
+            inputs = Decoder_Block("Decoder-ConvBlock3", inputs, 32)  # [n, 64, 64, 32]
+            print(':', inputs)
+            inputs = conv("conv4", inputs, 3, 5, 1)  # [n, 64, 64, 3]
+            inputs = tanh(inputs)
+            print(':', inputs)
+
+            return inputs
+
+    def var_list(self):
+        return tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, self.name)
