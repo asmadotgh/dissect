@@ -176,7 +176,7 @@ class EncoderZ:
             print(':', inputs)
             inputs = global_sum_pooling(inputs)  # [n, 256]
             print(':', inputs)
-            inputs = dense("dense1", inputs, 2048) # [n, 256]
+            inputs = dense("dense1", inputs, 2048)  # [n, 256]
             inputs = relu(inputs)
             print(':', inputs)
             inputs = dense("dense", inputs, 2 * num_dims)  # [n, 2*num_dims] 2 refers to mu and logvar
@@ -249,7 +249,7 @@ class Decoder:
     def __init__(self, name='decoder'):  # Initialize with decoder_x or decoder_y
         self.name = name
 
-    def __call__(self, inputs, num_dims):
+    def __call__(self, inputs, num_dims, activation='tanh'):
         with tf.variable_scope(name_or_scope=self.name, reuse=tf.AUTO_REUSE):
             # input: [n, 64, 64, 6]
 
@@ -265,7 +265,13 @@ class Decoder:
             inputs = Decoder_Block("Decoder-ConvBlock3", inputs, 32)  # [n, 64, 64, 32]
             print(':', inputs)
             inputs = conv("conv4", inputs, 3, 5, 1)  # [n, 64, 64, 3]
-            inputs = tanh(inputs)
+
+            if activation == 'tanh':
+                inputs = tanh(inputs)
+            elif activation == 'sigmoid':
+                inputs = sigmoid(inputs)
+            else:
+                raise Exception('Activation not supported, use tanh or sigmoid')
             print(':', inputs)
 
             return inputs
