@@ -23,14 +23,10 @@ from explainer.networks_64 import DecoderY as DecoderY_64
 import tensorflow.contrib.slim as slim
 import tensorflow as tf
 import numpy as np
-from utils import save_images, read_data_file
+from utils import save_images, save_image, read_data_file, make3d_tensor
 from losses import *
 import pdb
 import yaml
-import time
-import scipy.io as sio
-from datetime import datetime
-import random
 import warnings
 import argparse
 
@@ -140,7 +136,7 @@ def train():
         sys.exit()
     data = np.asarray(list(file_names_dict.keys()))
 
-    # TODO do we need descretized values?
+    # CSVAE does not need discretizing categories. The default 2 is recommended.
     print("The classification categories are: ")
     print(categories)
     print('The size of the training set: ', data.shape[0])
@@ -154,8 +150,8 @@ def train():
     y_source = y_s[:, 0]
     train_phase = tf.placeholder(tf.bool, name='train_phase')
 
-    y_t = tf.placeholder(tf.int32, [None, NUMS_CLASS], name='y_t')
-    y_target = y_t[:, 0]
+    # TODO alternative traversal
+    # w_sample = tf.placeholder(tf.float32, [None, w_dim], name='w_sample')
 
     # ============= CSVAE =============
 
@@ -174,20 +170,31 @@ def train():
     # get predicted labels based only on the latent subspace Z
     pred_y = decoder_y(z, NUMS_CLASS)
 
+    # TODO alternative traversal
+    # fake_img = decoder_x(tf.concat([w_sample, z], axis=-1))
+
+    fake_img_traversal = tf.zeros([0, input_size, input_size, channels])
+    TRAVERSALS = [0.0, 1.5, 3.]
+    for i in range(w_dim):
+        for val in TRAVERSALS:
+            np_arr = np.zeros((BATCH_SIZE, w_dim))
+            np_arr[:, i] = val
+            tmp_w = tf.convert_to_tensor(np_arr, dtype=tf.float32)
+            fake_img = decoder_x(tf.concat([tmp_w, z], axis=-1))
+            fake_img_traversal = tf.concat([fake_img_traversal, fake_img], axis=0)
+    fake_img_traversal = make3d_tensor(fake_img_traversal, channels, input_size, w_dim, len(TRAVERSALS), BATCH_SIZE)
+
+    # TODO IMP double check if correct? need to reshape fake_img_traversal?
     # ============= pre-trained classifier =============
+    # TODO IMP need predictions? currently not using classifier output AT ALL !!!
     real_img_cls_logit_pretrained, real_img_cls_prediction = pretrained_classifier(x_source, NUMS_CLASS_cls,
                                                                                    reuse=False, name='classifier')
-    # TODO generate a set of images with decoder and pass them through external classifier?
-    # fake_img_cls_logit_pretrained, fake_img_cls_prediction = pretrained_classifier(fake_target_img, NUMS_CLASS_cls,
-    #                                                                                reuse=True)
-    # real_img_recons_cls_logit_pretrained, real_img_recons_cls_prediction = pretrained_classifier(fake_source_img,
-    #                                                                                              NUMS_CLASS_cls,
-    #                                                                                              reuse=True)
+    fake_img_cls_logit_pretrained, fake_img_cls_prediction = pretrained_classifier(fake_img, NUMS_CLASS_cls,
+                                                                                   reuse=True)
 
     # ============= pre-trained classifier loss =============
-    real_p = tf.cast(y_target, tf.float32) * 1.0 / float(NUMS_CLASS - 1)
-    # TODO do I need predicted probability?
-    # fake_q = fake_img_cls_prediction[:, target_class]
+    # real_p = tf.reduce_mean(w_sample/3.0)
+    fake_q = fake_img_cls_prediction[:, target_class]
 
     # ============= Loss =============
     # OPTIMIZATION:
@@ -233,10 +240,8 @@ def train():
 
     # ============= summary =============
     real_img_sum = tf.summary.image('real_img', x_source)
-    # TODO for each dimension, create a fake image at 3, and one fake image at all 0
-    # fake_img_sum = tf.summary.image('fake_target_img', fake_target_img)
-    # fake_source_img_sum = tf.summary.image('fake_source_img', fake_source_img)
-    # fake_source_recons_img_sum = tf.summary.image('fake_source_recons_img', fake_source_recons_img)
+    fake_img_sum = tf.summary.image('fake_img', fake_img)
+    fake_img_traversal_sum = tf.summary.image('fake_img_traversal', fake_img_traversal)
 
     loss_m1_sum = tf.summary.scalar('losses/M1', loss_m1)
     loss_m1_1_sum = tf.summary.scalar('losses/M1/m1_1', loss_m1_1)
@@ -251,7 +256,7 @@ def train():
     part2_sum = tf.summary.merge(
         [loss_n_sum, loss_sum, ])
     overall_sum = tf.summary.merge(
-        [loss_sum, real_img_sum])
+        [loss_sum, real_img_sum, fake_img_sum, fake_img_traversal_sum])
 
     # ============= session =============
     sess = tf.Session()
@@ -305,8 +310,7 @@ def train():
             labels = convert_ordinal_to_binary(labels, NUMS_CLASS)
             target_labels = convert_ordinal_to_binary(target_labels, NUMS_CLASS)
 
-            my_feed_dict = {y_t: target_labels, x_source: img, train_phase: True,
-                            y_s: labels}
+            my_feed_dict = {x_source: img, train_phase: True, y_s: labels}
 
             _, par1_loss, par1_summary_str, overall_sum_str = sess.run([optimizer_1, loss1, part1_sum, overall_sum],
                                                                        feed_dict=my_feed_dict)
@@ -328,23 +332,31 @@ def train():
                                                                     file_names_dict=file_names_dict,
                                                                     num_channel=channels,
                                                                     do_center_crop=True)
-                 # TODO save a few samples
-                # labels = np.repeat(labels, NUMS_CLASS * w_dim, 0)
-                # labels = labels.ravel()
-                # labels = convert_ordinal_to_binary(labels, NUMS_CLASS)
+
+                my_feed_dict = {x_source: img, train_phase: False,
+                                y_s: labels}
+
+                sample_fake_img_traversal = sess.run([fake_img_traversal], feed_dict=my_feed_dict)
+
+                # save samples
+                sample_file = os.path.join(sample_dir, '%06d.jpg' % step)
+                save_image(sample_fake_img_traversal, sample_file)
+                # save_images(sample_fake_img_traversal, sample_file, num_samples=num_seed_imgs,
+                #             nums_class=3, k_dim=w_dim, image_size=input_size, num_channel=channels)
+
+                # TODO alternative traversal
+                # Sample w s here and pass through the model
+
                 # img_repeat = np.repeat(img, NUMS_CLASS * w_dim, 0)
                 #
-                # target_labels = np.asarray([np.asarray(range(NUMS_CLASS)) for j in range(num_seed_imgs * k_dim)])
-                # target_labels = target_labels.ravel()
-                # target_labels = convert_ordinal_to_binary(target_labels, NUMS_CLASS)
+                # input_w = np.asarray([np.asarray(range(NUMS_CLASS)) for j in range(num_seed_imgs * w_dim)])
+                # input_w = target_labels.ravel()
+                # input_w = convert_ordinal_to_binary(target_labels, NUMS_CLASS)
                 #
+                # my_feed_dict = {x_source: img_repeat, train_phase: False,
+                #                 y_s: labels, w_sample: input_w}
                 #
-                # my_feed_dict = {y_t: target_labels, x_source: img_repeat, train_phase: False,
-                #                 y_s: labels}
-                #
-                #
-                # FAKE_IMG, fake_logits_ = sess.run([fake_target_img, fake_target_logits],
-                #                                   feed_dict=my_feed_dict)
+                # FAKE_IMG = sess.run([fake_img], feed_dict=my_feed_dict)
                 #
                 # output_fake_img = np.reshape(FAKE_IMG, [-1, w_dim, NUMS_CLASS, input_size, input_size, channels])
                 #
@@ -352,7 +364,6 @@ def train():
                 # sample_file = os.path.join(sample_dir, '%06d.jpg' % step)
                 # save_images(output_fake_img, sample_file, num_samples=num_seed_imgs,
                 #             nums_class=NUMS_CLASS, k_dim=w_dim, image_size=input_size, num_channel=channels)
-                # np.save(sample_file.split('.jpg')[0] + '_y.npy', labels)
 
             if counter % save_summary == 0:
                 save_results(sess, counter)

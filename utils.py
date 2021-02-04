@@ -73,6 +73,21 @@ def inverse_image(img):
     return img.astype(np.uint8)
 
 
+def make3d_tensor(img, num_channel, image_size, row, col, batch_size):
+    # img.shape = [batch_size*row*col, h, w, c]
+    # final: [batch_size, row*h, col*w, c]
+    if num_channel > 1:
+        img = tf.reshape(img, [batch_size*row, col, image_size, image_size, num_channel])  # [batch*row, col, h, w, c]
+    else:
+        img = tf.reshape(img, [batch_size*row, col, image_size, image_size])  # [batch*row, col, h, w]
+    img = tf.unstack(img, axis=0)  # batch*row * [col, h, w, c]
+    img = tf.concat(img, axis=1)  # [col, batch* row*h, w, c]
+    img = tf.unstack(img, axis=0)  # col * [batch* row*h, w, c]
+    img = tf.concat(img, axis=1)  # [batch*row*h, col*w, c]
+    img = tf.reshape(img, [batch_size, row*image_size, col*image_size, num_channel])  # [batch, row*h, col*w, c]
+    return img
+
+
 def make3d(img, num_channel, image_size, row, col):
     # img.shape = [row*col, h, w, c]
     # final: [row*h, col*w, c]
@@ -98,6 +113,10 @@ def save_images(img, sample_file, num_samples, nums_class, k_dim=1, image_size=1
     n_cols = nums_class
     img = make3d(img, num_channel=num_channel, image_size=image_size, row=n_rows, col=n_cols)
     img = inverse_image(img)
+    scm.imsave(sample_file, img)
+
+
+def save_image(img, sample_file):
     scm.imsave(sample_file, img)
 
 
