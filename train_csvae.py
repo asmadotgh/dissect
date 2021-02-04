@@ -12,11 +12,13 @@ from explainer.ops import KL, safe_log, convert_ordinal_to_binary
 
 from explainer.networks_128 import EncoderZ as EncoderZ_128
 from explainer.networks_128 import EncoderW as EncoderW_128
-from explainer.networks_128 import Decoder as Decoder_128
+from explainer.networks_128 import DecoderX as DecoderX_128
+from explainer.networks_128 import DecoderY as DecoderY_128
 
 from explainer.networks_64 import EncoderZ as EncoderZ_64
 from explainer.networks_64 import EncoderW as EncoderW_64
-from explainer.networks_64 import Decoder as Decoder_64
+from explainer.networks_64 import DecoderX as DecoderX_64
+from explainer.networks_64 import DecoderY as DecoderY_64
 
 import tensorflow.contrib.slim as slim
 import tensorflow as tf
@@ -101,7 +103,8 @@ def train():
         my_data_loader = CelebALoader()
         EncoderZ = EncoderZ_128
         EncoderW = EncoderW_128
-        Decoder = Decoder_128
+        DecoderX = DecoderX_128
+        DecoderY = DecoderY_128
 
     elif dataset == 'shapes':
         pretrained_classifier = shapes_classifier
@@ -112,14 +115,16 @@ def train():
             my_data_loader = ShapesLoader()
         EncoderZ = EncoderZ_64
         EncoderW = EncoderW_64
-        Decoder = Decoder_64
+        DecoderX = DecoderX_64
+        DecoderY = DecoderY_64
 
     elif dataset == 'CelebA64' or dataset == 'dermatology':
         pretrained_classifier = celeba_classifier
         my_data_loader = CelebALoader(input_size=64)
         EncoderZ = EncoderZ_64
         EncoderW = EncoderW_64
-        Decoder = Decoder_64
+        DecoderX = DecoderX_64
+        DecoderY = DecoderY_64
 
     if ckpt_dir_continue == '':
         continue_train = False
@@ -152,13 +157,12 @@ def train():
     y_t = tf.placeholder(tf.int32, [None, NUMS_CLASS], name='y_t')
     y_target = y_t[:, 0]
 
-
     # ============= CSVAE =============
 
     encoder_z = EncoderZ('encoder_z')
     encoder_w = EncoderW('encoder_w')
-    decoder_x = Decoder('decoder_x')
-    decoder_y = Decoder('decoder_y')
+    decoder_x = DecoderX('decoder_x')
+    decoder_y = DecoderY('decoder_y')
 
     # encode x to get mean, log variance, and samples from the latent subspace Z
     mu_z, logvar_z, z = encoder_z(x_source, z_dim)
@@ -166,9 +170,9 @@ def train():
     mu_w, logvar_w, w = encoder_w(x_source, y_source, w_dim)
 
     # pass samples of z and w to get predictions of x
-    pred_x = decoder_x(tf.concat([w, z], axis=-1), tf.shape(x_source), activation='tanh')
+    pred_x = decoder_x(tf.concat([w, z], axis=-1))
     # get predicted labels based only on the latent subspace Z
-    pred_y = decoder_y(z, tf.shape(y_source), activation='sigmoid')
+    pred_y = decoder_y(z, NUMS_CLASS)
 
     # ============= pre-trained classifier =============
     real_img_cls_logit_pretrained, real_img_cls_prediction = pretrained_classifier(x_source, NUMS_CLASS_cls,
