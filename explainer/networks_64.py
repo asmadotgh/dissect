@@ -176,7 +176,7 @@ class EncoderZ:
             print(':', inputs)
             inputs = global_sum_pooling(inputs)  # [n, 256]
             print(':', inputs)
-            inputs = dense("dense1", inputs, 2048)  # [n, 256]
+            inputs = dense("dense1", inputs, 2048)  # [n, 2048]
             inputs = relu(inputs)
             print(':', inputs)
             inputs = dense("dense", inputs, 2 * num_dims)  # [n, 2*num_dims] 2 refers to mu and logvar
@@ -212,7 +212,7 @@ class EncoderW:
             print(':', inputs)
             inputs = Encoder_Block("Encoder-ConvBlock2", inputs, 128)  # [n, 16, 16, 128]
             print(':', inputs)
-            inputs = Encoder_Block("Encoder-ConvBlock1", inputs, 256)  # [n, 84, 8, 256]
+            inputs = Encoder_Block("Encoder-ConvBlock1", inputs, 256)  # [n, 8, 8, 256]
             print(':', inputs)
             inputs = global_sum_pooling(inputs)  # [n, 256]
             print(':', inputs)
@@ -242,7 +242,7 @@ class Decoder:
     This class transforms the an embedding into a vector in the latent space, could be an image or reconstructed y.
     Requires input and output dimensions.
     Example:
-    Input dimension: 2 (latent dims from Z) + 2 (latent dims from W)
+    Input dimension: z_dim (latent dims from Z) + w_dim (latent dims from W)
     Output dimension: [n, 64, 64, 3] original image data
     """
 
