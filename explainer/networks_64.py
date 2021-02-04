@@ -155,7 +155,6 @@ class Discriminator_Contrastive:
 class EncoderZ:
     """
     This class transforms the images into a vector in the latent space, Z.
-    Requires input and output dimensions.
     Example:
     Input dimension:  [n, 64, 64, 3] images
     Output dimension: num_dims (z_dim in the latent space)
@@ -195,7 +194,6 @@ class EncoderZ:
 class EncoderW:
     """
     This class transforms the images and labels into a vector in the latent space, W.
-    Requires input and output dimensions.
     Example:
     Input dimension:  [n, 64, 64, 3] images , [n, 1] labels
     Output dimension: num_dims (w_dim in the latent space)
@@ -237,21 +235,20 @@ class EncoderW:
         return tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, self.name)
 
 
-class Decoder:
+class DecoderX:
     """
-    This class transforms the an embedding into a vector in the latent space, could be an image or reconstructed y.
-    Requires input and output dimensions.
+    This class transforms an embedding into reconstructed images.
     Example:
     Input dimension: z_dim (latent dims from Z) + w_dim (latent dims from W)
     Output dimension: [n, 64, 64, 3] original image data
     """
 
-    def __init__(self, name='decoder'):  # Initialize with decoder_x or decoder_y
+    def __init__(self, name='decoder_x'):
         self.name = name
 
-    def __call__(self, inputs, num_dims, activation='tanh'):
+    def __call__(self, inputs):
         with tf.variable_scope(name_or_scope=self.name, reuse=tf.AUTO_REUSE):
-            # input: [n, 64, 64, 3]
+            # input: [n, z_dim+w_dim]
 
             print(self.name)
             inputs = relu(inputs)
@@ -265,15 +262,45 @@ class Decoder:
             inputs = Decoder_Block("Decoder-ConvBlock3", inputs, 32)  # [n, 64, 64, 32]
             print(':', inputs)
             inputs = conv("conv4", inputs, 3, 5, 1)  # [n, 64, 64, 3]
-
-            if activation == 'tanh':
-                inputs = tanh(inputs)
-            elif activation == 'sigmoid':
-                inputs = sigmoid(inputs)
-            else:
-                raise Exception('Activation not supported, use tanh or sigmoid')
+            inputs = tanh(inputs)
             print(':', inputs)
+            return inputs
 
+    def var_list(self):
+        return tf.get_collection(tf.GraphKeys.GLOBAL_VARIABLES, self.name)
+
+
+class DecoderY:
+    """
+    This class transforms an embedding into reconstructed labels.
+    Example:
+    Input dimension: z_dim (latent dims from Z)
+    Output dimension: [n, nums_class] labels
+    """
+
+    def __init__(self, name='decoder_y'):
+        self.name = name
+
+    def __call__(self, inputs, nums_class):
+        with tf.variable_scope(name_or_scope=self.name, reuse=tf.AUTO_REUSE):
+            # input: [n, z_dim]
+
+            print(self.name)
+            inputs = relu(inputs)
+            inputs = dense('dense1', inputs, 8*8*256)
+            inputs = tf.reshape(inputs, [-1, 8, 8, 256])
+
+            inputs = Decoder_Block("Decoder-ConvBlock1", inputs, 256)  # [n, 16, 16, 256]
+            print(':', inputs)
+            inputs = Decoder_Block("Decoder-ConvBlock2", inputs, 128)  # [n, 32, 32, 128]
+            print(':', inputs)
+            inputs = Decoder_Block("Decoder-ConvBlock3", inputs, 32)  # [n, 64, 64, 32]
+            print(':', inputs)
+            inputs = global_sum_pooling(inputs)  # [n, 32]
+            print(':', inputs)
+            inputs = dense("dense2", inputs, nums_class)  # [n, nums_class]
+            inputs = softmax(inputs)
+            print(':', inputs)
             return inputs
 
     def var_list(self):
