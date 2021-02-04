@@ -1,6 +1,6 @@
-'''
+"""
 This network is build on top of SNGAN network implementation from: https://github.com/MingtaoGuo/sngan_projection_TensorFlow.git
-'''
+"""
 from explainer.ops import *
 from tensorflow.contrib.layers import flatten
 import pdb
@@ -157,7 +157,7 @@ class EncoderZ:
     This class transforms the images into a vector in the latent space, Z.
     Requires input and output dimensions.
     Example:
-    Input dimension:  [n, 64, 64, 6] images
+    Input dimension:  [n, 64, 64, 3] images
     Output dimension: num_dims (z_dim in the latent space)
     """
     def __init__(self, name='encoder_z'):
@@ -197,7 +197,7 @@ class EncoderW:
     This class transforms the images and labels into a vector in the latent space, W.
     Requires input and output dimensions.
     Example:
-    Input dimension:  [n, 64, 64, 6] images , [n, 1] labels
+    Input dimension:  [n, 64, 64, 3] images , [n, 1] labels
     Output dimension: num_dims (w_dim in the latent space)
     """
     def __init__(self, name='encoder_w'):
@@ -251,7 +251,7 @@ class Decoder:
 
     def __call__(self, inputs, num_dims, activation='tanh'):
         with tf.variable_scope(name_or_scope=self.name, reuse=tf.AUTO_REUSE):
-            # input: [n, 64, 64, 6]
+            # input: [n, 64, 64, 3]
 
             print(self.name)
             inputs = relu(inputs)
