@@ -1,0 +1,41 @@
+###########
+# CSVAE Discoverer #
+###########
+
+dataset: 'CelebA64'
+
+# only used for debugging
+max_samples_per_bin: 5000
+
+image_dir: './data/CelebA/images/'
+image_label_dict: './output/classifier/CelebA64-biased_or/explainer_input/list_attr_5_10000.txt' #path where the training data as [image name, label] is saved. Here label is the bin-index. Refer ./test_classifier.py to see how to create this file from the classifier results.
+cls_experiment: './output/classifier/CelebA64-biased_or' #address where classifier checkpoint is saved
+log_dir: './output/csvae_experiments/' #address where explainer checkpoint and summaries will be saved
+name: 'celeba64_biased_or_csvae_multidim' #name of the folder at the above address
+
+num_channel: 3
+num_class: 2
+#number of classes in classifier
+num_bins: 2
+#number of bins the output class probability between [0,1] is discretized into.
+target_class: 1
+#the class for which explanation has to be generated
+input_size: 64
+batch_size: 64
+epochs: 23000
+
+
+# adam optimizer with betas = (0.9, 0.999)
+# eps = 1e-8 and initial lr = 1e-3 / 2
+# PyTorch multiStepLR learning rate scheduler with milestones 3**i, i for 0 to 6, gamma = 0.1 ** (1/7)
+
+
+# CSVAE params
+beta1: 20.
+beta2: 1.
+beta3: 0.2
+beta4: 10.
+beta5: 1.
+
+z_dim: 2
+w_dim: 2
