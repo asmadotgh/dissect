@@ -29,6 +29,10 @@ def sigmoid(inputs, name=None):
     return tf.nn.sigmoid(inputs, name=name)
 
 
+def softmax(inputs, name=None):
+    return tf.nn.softmax(inputs, name=name)
+
+
 def _l2normalize(v, eps=1e-12):
     """l2 normize the input vector."""
     return v / (tf.reduce_sum(v ** 2) ** 0.5 + eps)
