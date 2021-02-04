@@ -39,3 +39,17 @@ beta5: 1.
 
 z_dim: 2
 w_dim: 2
+
+
+save_summary: 20
+# Save sample images after every how many iterations.
+
+ckpt_dir_continue: './output/csvae_experiments/shapes_redcyan_csvae_multidim'
+
+count_to_save: 10000
+# number of samples to save while testing
+
+# hyperparameters for calculating metrics: influential, distinct, realistic
+metrics_batch_size: 32
+metrics_epochs: 10
+metrics_test_ratio: 0.25
