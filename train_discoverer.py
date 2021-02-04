@@ -7,6 +7,7 @@ from classifier.DenseNet import pretrained_classifier as celeba_classifier
 from classifier.SimpleNet import pretrained_classifier as shapes_classifier
 from data_loader.data_loader import CelebALoader, ShapesLoader
 
+from explainer.ops import safe_log
 from explainer.networks_128 import Discriminator_Ordinal as Discriminator_Ordinal_128
 from explainer.networks_128 import Generator_Encoder_Decoder as Generator_Encoder_Decoder_128
 from explainer.networks_128 import Discriminator_Contrastive as Discriminator_Contrastive_128
@@ -184,17 +185,14 @@ def train():
                                                                                                  reuse=True)
 
     # ============= pre-trained classifier loss =============
-    def _safe_log(inp):
-        EPS = 1e-10
-        return tf.math.log(inp + EPS)
     real_p = tf.cast(y_target, tf.float32) * 1.0 / float(NUMS_CLASS - 1)
     fake_q = fake_img_cls_prediction[:, target_class]
-    fake_evaluation = (real_p * _safe_log(fake_q)) + ((1 - real_p) * _safe_log(1 - fake_q))
+    fake_evaluation = (real_p * safe_log(fake_q)) + ((1 - real_p) * safe_log(1 - fake_q))
     fake_evaluation = -tf.reduce_mean(fake_evaluation)
 
-    recons_evaluation = (real_img_cls_prediction[:, target_class] * _safe_log(
+    recons_evaluation = (real_img_cls_prediction[:, target_class] * safe_log(
         real_img_recons_cls_prediction[:, target_class])) + (
-                                (1 - real_img_cls_prediction[:, target_class]) * _safe_log(
+                                (1 - real_img_cls_prediction[:, target_class]) * safe_log(
                             1 - real_img_recons_cls_prediction[:, target_class]))
     recons_evaluation = -tf.reduce_mean(recons_evaluation)
 

@@ -24,6 +24,10 @@ def tanh(inputs, name=None):
     return tf.nn.tanh(inputs, name=name)
 
 
+def sigmoid(inputs, name=None):
+    return tf.nn.sigmoid(inputs, name=name)
+
+
 def _l2normalize(v, eps=1e-12):
     """l2 normize the input vector."""
     return v / (tf.reduce_sum(v ** 2) ** 0.5 + eps)
@@ -236,13 +240,18 @@ def Encoder_Block(name, inputs, nums_out):
     return inputs
 
 
+def safe_log(inp):
+    EPS = 1e-10
+    return tf.math.log(inp + EPS)
+
+
 def KL(mu1, logvar1, mu2, logvar2):
     """
-    Calculates the KL divergence between two gaussians
+    Calculates the KL divergence between two Gaussians
     See appendix here for a generalized version of this formula: https://arxiv.org/pdf/1312.6114.pdf
     """
     std1 = tf.exp(0.5 * logvar1)
     std2 = tf.exp(0.5 * logvar2)
     return tf.reduce_sum(
-        tf.log(std2) - tf.log(std1) + 0.5 * (tf.exp(logvar1) + (mu1 - mu2) ** 2) / tf.exp(logvar2) - 0.5,
+        safe_log(std2) - safe_log(std1) + 0.5 * (tf.exp(logvar1) + (mu1 - mu2) ** 2) / tf.exp(logvar2) - 0.5,
         axis=-1)
