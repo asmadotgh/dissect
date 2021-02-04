@@ -8,7 +8,7 @@ from classifier.DenseNet import pretrained_classifier as celeba_classifier
 from classifier.SimpleNet import pretrained_classifier as shapes_classifier
 from data_loader.data_loader import CelebALoader, ShapesLoader
 
-from explainer.ops import KL, safe_log
+from explainer.ops import KL, safe_log, convert_ordinal_to_binary
 
 from explainer.networks_128 import EncoderZ as EncoderZ_128
 from explainer.networks_128 import EncoderW as EncoderW_128
@@ -34,16 +34,6 @@ import argparse
 
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
-
-
-def convert_ordinal_to_binary(y, n):
-    y = np.asarray(y).astype(int)
-    new_y = np.zeros([y.shape[0], n])
-    new_y[:, 0] = y
-    for i in range(0, y.shape[0]):
-        for j in range(1, y[i] + 1):
-            new_y[i, j] = 1
-    return new_y
 
 
 def train():
