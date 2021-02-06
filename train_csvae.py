@@ -23,7 +23,7 @@ from explainer.networks_64 import DecoderY as DecoderY_64
 import tensorflow.contrib.slim as slim
 import tensorflow as tf
 import numpy as np
-from utils import save_images, save_image, read_data_file, make3d_tensor
+from utils import save_images, save_image, read_data_file, make3d_tensor, make4d_tensor
 from losses import *
 import pdb
 import yaml
@@ -182,7 +182,8 @@ def train():
             tmp_w = tf.convert_to_tensor(np_arr, dtype=tf.float32)
             fake_img = decoder_x(tf.concat([tmp_w, z], axis=-1))
             fake_img_traversal = tf.concat([fake_img_traversal, fake_img], axis=0)
-    fake_img_traversal = make3d_tensor(fake_img_traversal, channels, input_size, w_dim, len(TRAVERSALS), BATCH_SIZE)
+    fake_img_traversal_board = make4d_tensor(fake_img_traversal, channels, input_size, w_dim, len(TRAVERSALS), BATCH_SIZE)
+    fake_img_traversal_save = make3d_tensor(fake_img_traversal, channels, input_size, w_dim, len(TRAVERSALS), BATCH_SIZE)
 
     # TODO IMP double check if correct? need to reshape fake_img_traversal?
     # ============= pre-trained classifier =============
@@ -241,7 +242,7 @@ def train():
     # ============= summary =============
     real_img_sum = tf.summary.image('real_img', x_source)
     fake_img_sum = tf.summary.image('fake_img', fake_img)
-    fake_img_traversal_sum = tf.summary.image('fake_img_traversal', fake_img_traversal)
+    fake_img_traversal_sum = tf.summary.image('fake_img_traversal', fake_img_traversal_board)
 
     loss_m1_sum = tf.summary.scalar('losses/M1', loss_m1)
     loss_m1_1_sum = tf.summary.scalar('losses/M1/m1_1', loss_m1_1)
@@ -326,21 +327,25 @@ def train():
             counter += 1
 
             def save_results(sess, step):
-                num_seed_imgs = 8
+                num_seed_imgs = BATCH_SIZE
                 img, labels = my_data_loader.load_images_and_labels(image_paths[0:num_seed_imgs],
                                                                     image_dir=config['image_dir'], n_class=1,
                                                                     file_names_dict=file_names_dict,
                                                                     num_channel=channels,
                                                                     do_center_crop=True)
 
+                labels = labels.ravel()
+                labels = convert_ordinal_to_binary(labels, NUMS_CLASS)
+
                 my_feed_dict = {x_source: img, train_phase: False,
                                 y_s: labels}
 
-                sample_fake_img_traversal = sess.run([fake_img_traversal], feed_dict=my_feed_dict)
+                sample_fake_img_traversal = sess.run(fake_img_traversal_save, feed_dict=my_feed_dict)
 
                 # save samples
                 sample_file = os.path.join(sample_dir, '%06d.jpg' % step)
                 save_image(sample_fake_img_traversal, sample_file)
+
                 # save_images(sample_fake_img_traversal, sample_file, num_samples=num_seed_imgs,
                 #             nums_class=3, k_dim=w_dim, image_size=input_size, num_channel=channels)
 
@@ -365,11 +370,12 @@ def train():
                 # save_images(output_fake_img, sample_file, num_samples=num_seed_imgs,
                 #             nums_class=NUMS_CLASS, k_dim=w_dim, image_size=input_size, num_channel=channels)
 
-            if counter % save_summary == 0:
-                save_results(sess, counter)
+            batch_counter = int(counter/2)
+            if batch_counter % save_summary == 0:
+                save_results(sess, batch_counter)
 
-            if counter % 500 == 0:
-                saver.save(sess, ckpt_dir + "/model%2d.ckpt" % counter)
+            if batch_counter % 500 == 0:
+                saver.save(sess, ckpt_dir + "/model%2d.ckpt" % batch_counter)
 
 
 if __name__ == "__main__":
