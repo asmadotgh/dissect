@@ -73,7 +73,7 @@ def calc_distinct(results_dict):
     K_DIM = config['k_dim']
     TARGET_CLASS = config['target_class']
     if K_DIM <= 1:
-        print('This model has only one dimension. Distincness metrics are not applicable.')
+        print('This model has only one dimension. Distinctness metrics are not applicable.')
         return {}
     channels = config['num_channel']
     input_size = config['input_size']
