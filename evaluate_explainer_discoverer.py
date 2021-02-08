@@ -9,20 +9,12 @@ import argparse
 from scipy.stats import entropy, pearsonr, spearmanr
 from metrics.posthoc_classification import classifier_distinct_64, classifier_realistic_64
 import tensorflow as tf
-from utils import calc_metrics_arr, calc_accuracy
+from utils import calc_metrics_arr, calc_accuracy, safe_append
 from sklearn.metrics import mean_squared_error
 import math
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 np.random.seed(0)
-
-
-def _safe_append(all_arr, curr_arr, axis=0):
-    if np.size(all_arr) == 0:
-        res = curr_arr
-    else:
-        res = np.append(all_arr, curr_arr, axis=axis)
-    return res
 
 
 _EMPTY_ARR = np.empty([0])
@@ -45,7 +37,8 @@ def calc_influential(results_dict, target_class):
     spearman_r, spearman_p = spearmanr(p, q)
 
     print(
-        'Influential - MSE: {:.3f}, KL: {:.3f}, pearson_r: {:.3f}, pearson_p: {:.3f}, spearman_r: {:.3f}, spearman_p:{:.3f}'.format(
+        'Influential - MSE: {:.3f}, KL: {:.3f}, pearson_r: {:.3f}, pearson_p: {:.3f}, spearman_r: {:.3f}, '
+        'spearman_p:{:.3f}'.format(
             MSE, KL, pearson_r, pearson_p, spearman_r, spearman_p))
 
     metrics_dict = {}
@@ -94,8 +87,8 @@ def calc_distinct(results_dict):
                              results_dict['fake_target_ps'][fake_inds])
             labels_dim_bin = np.eye(K_DIM)[switched_dim]
             labels_dim_bin[fixed_indices] = 0
-            data = _safe_append(data, data_dim_bin)
-            labels = _safe_append(labels, labels_dim_bin)
+            data = safe_append(data, data_dim_bin)
+            labels = safe_append(labels, labels_dim_bin)
 
     data_len = len(data)
     data_inds = np.array(range(data_len))
@@ -174,7 +167,7 @@ def calc_distinct(results_dict):
         writer_test.add_summary(summary_str, itr_test)
         itr_test += 1
         total_test_loss += _loss
-        test_preds = _safe_append(test_preds, _pred, axis=0)
+        test_preds = safe_append(test_preds, _pred, axis=0)
     total_test_loss /= num_batch
     print("Epoch: " + str(epoch) + " Test loss: " + str(total_loss) + '\n')
     test_loss.append(total_test_loss)
@@ -308,7 +301,7 @@ def calc_realistic(results_dict, config):
         writer_test.add_summary(summary_str, itr_test)
         itr_test += 1
         total_test_loss += _loss
-        test_preds = _safe_append(test_preds, _pred, axis=0)
+        test_preds = safe_append(test_preds, _pred, axis=0)
     total_test_loss /= num_batch
     print("Epoch: " + str(epoch) + " Test loss: " + str(total_loss) + '\n')
     test_loss.append(total_test_loss)
