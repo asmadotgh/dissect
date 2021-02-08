@@ -81,16 +81,14 @@ def train():
     STEP_SIZE = MU_CLUSTER/(NUMS_CLASS - 1)
     target_class = config['target_class']
 
-    # ADDED
+    # CSVAE parameters
     beta1 = config['beta1']
     beta2 = config['beta2']
     beta3 = config['beta3']
     beta4 = config['beta4']
     beta5 = config['beta5']
-
     z_dim = config['z_dim']
     w_dim = config['w_dim']
-    ##
 
     save_summary = int(config['save_summary'])
     ckpt_dir_continue = config['ckpt_dir_continue']
@@ -152,7 +150,7 @@ def train():
     y_source = y_s[:, NUMS_CLASS_cls-1]
     train_phase = tf.placeholder(tf.bool, name='train_phase')
 
-    y_target = tf.placeholder(tf.int32, [None, w_dim], name='y_target')  # between 0 and NUMS_CLASS TODO double check
+    y_target = tf.placeholder(tf.int32, [None, w_dim], name='y_target')  # between 0 and NUMS_CLASS
 
     # ============= CSVAE =============
 
@@ -185,11 +183,10 @@ def train():
     fake_img_traversal_save = make3d_tensor(fake_img_traversal, channels, input_size, w_dim, NUMS_CLASS, BATCH_SIZE)
 
     # Create a single image based on y_target
-    target_w = STEP_SIZE * tf.cast(y_target, dtype=tf.float32)  # TODO double check
+    target_w = STEP_SIZE * tf.cast(y_target, dtype=tf.float32)
     fake_target_img = decoder_x(tf.concat([target_w, z], axis=-1))
 
     # ============= pre-trained classifier =============
-    # TODO double check
 
     real_img_cls_logit_pretrained, real_img_cls_prediction = pretrained_classifier(x_source, NUMS_CLASS_cls,
                                                                                    reuse=False, name='classifier')

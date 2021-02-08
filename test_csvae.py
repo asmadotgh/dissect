@@ -62,16 +62,15 @@ def test(config_path, dbg_img_label_dict=None, dbg_mode=False, export_output=Tru
     else:
         image_label_dict = config['image_label_dict']
 
-    # ADDED
+    # CSVAE parameters
     beta1 = config['beta1']
     beta2 = config['beta2']
     beta3 = config['beta3']
     beta4 = config['beta4']
     beta5 = config['beta5']
-
     z_dim = config['z_dim']
     w_dim = config['w_dim']
-    ##
+
     if dbg_mode:
         num_samples = dbg_size
     else:
@@ -134,7 +133,7 @@ def test(config_path, dbg_img_label_dict=None, dbg_mode=False, export_output=Tru
     y_source = y_s[:, NUMS_CLASS_cls - 1]
     train_phase = tf.placeholder(tf.bool, name='train_phase')
 
-    y_target = tf.placeholder(tf.int32, [None, w_dim], name='y_target')  # between 0 and NUMS_CLASS TODO double check
+    y_target = tf.placeholder(tf.int32, [None, w_dim], name='y_target')  # between 0 and NUMS_CLASS
 
     generation_dim = w_dim
 
@@ -155,11 +154,10 @@ def test(config_path, dbg_img_label_dict=None, dbg_mode=False, export_output=Tru
     pred_y = decoder_y(z, NUMS_CLASS_cls)
 
     # Create a single image based on y_target
-    target_w = STEP_SIZE * tf.cast(y_target, dtype=tf.float32)  # TODO double check
+    target_w = STEP_SIZE * tf.cast(y_target, dtype=tf.float32)
     fake_target_img = decoder_x(tf.concat([target_w, z], axis=-1))
 
     # ============= pre-trained classifier =============
-    # TODO double check
     real_img_cls_logit_pretrained, real_img_cls_prediction = pretrained_classifier(x_source, NUMS_CLASS_cls,
                                                                                    reuse=False, name='classifier')
     fake_recon_cls_logit_pretrained, fake_recon_cls_prediction = pretrained_classifier(pred_x, NUMS_CLASS_cls,
@@ -168,7 +166,6 @@ def test(config_path, dbg_img_label_dict=None, dbg_mode=False, export_output=Tru
                                                                                    reuse=True)
 
     # ============= predicted probabilities =============
-    # TODO need to be the right size
     fake_target_p_tensor = tf.reduce_max(tf.cast(y_target, tf.float32) * 1.0 / float(NUMS_CLASS - 1), axis=1)
 
     # ============= session =============
@@ -203,10 +200,8 @@ def test(config_path, dbg_img_label_dict=None, dbg_mode=False, export_output=Tru
     def _save_output_array(name, values):
         np.save(os.path.join(test_dir, '{}.npy'.format(name)), values)
 
-    # TODO check the variables
     names = np.empty([num_samples], dtype=object)
     real_imgs = np.empty([num_samples, input_size, input_size, channels])
-    # TODO fake recon and target images, need to figure out sizing
     fake_t_imgs = np.empty([num_samples * generation_dim * NUMS_CLASS, input_size, input_size, channels])
     fake_s_recon_imgs = np.empty([num_samples * generation_dim * NUMS_CLASS, input_size, input_size, channels])
     real_ps = np.empty([num_samples * generation_dim * NUMS_CLASS, NUMS_CLASS_cls])
@@ -244,7 +239,6 @@ def test(config_path, dbg_img_label_dict=None, dbg_mode=False, export_output=Tru
         labels = labels.ravel()
         labels = np.eye(NUMS_CLASS_cls)[labels.astype(int)]
 
-        # TODO check target labels
         target_labels = np.tile(
             np.repeat(np.expand_dims(np.asarray(range(NUMS_CLASS)), axis=1), generation_dim, axis=1),  # [NUMS_CLASS, w_dim]
             (num_seed_imgs*generation_dim, 1))  # [num_seed_imgs * w_dim * NUMS_CLASS, w_dim]
@@ -252,19 +246,15 @@ def test(config_path, dbg_img_label_dict=None, dbg_mode=False, export_output=Tru
         my_feed_dict = {y_target: target_labels, x_source: img_repeat, train_phase: False,
                         y_s: labels}
 
-
         fake_t_img, fake_s_recon_img, real_p, recon_p, fake_target_p, fake_p = sess.run(
             [fake_target_img, pred_x,
              real_img_cls_prediction, fake_recon_cls_prediction, fake_target_p_tensor, fake_img_cls_prediction],
             feed_dict=my_feed_dict)
 
-
         start_ind = i * BATCH_SIZE
         end_ind = (i + 1) * BATCH_SIZE
         multiplier = generation_dim * NUMS_CLASS
         names[start_ind: end_ind] = np.asarray(image_paths)
-
-        # TODO problem with sizes
 
         real_imgs[start_ind: end_ind] = img
         fake_t_imgs[start_ind * multiplier: end_ind * multiplier] = fake_t_img
