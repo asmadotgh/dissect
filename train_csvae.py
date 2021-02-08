@@ -245,6 +245,7 @@ def train():
 
     # ============= summary =============
     real_img_sum = tf.summary.image('real_img', x_source)
+    fake_recon_img_sum = tf.summary.image('fake_recon_img', pred_x)
     fake_img_sum = tf.summary.image('fake_target_img', fake_target_img)
     fake_img_traversal_sum = tf.summary.image('fake_img_traversal', fake_img_traversal_board)
 
@@ -261,7 +262,7 @@ def train():
     part2_sum = tf.summary.merge(
         [loss_n_sum, loss_sum, ])
     overall_sum = tf.summary.merge(
-        [loss_sum, real_img_sum, fake_img_sum, fake_img_traversal_sum])
+        [loss_sum, real_img_sum, fake_recon_img_sum, fake_img_sum, fake_img_traversal_sum])
 
     # ============= session =============
     sess = tf.Session()
