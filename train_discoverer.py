@@ -7,7 +7,7 @@ from classifier.DenseNet import pretrained_classifier as celeba_classifier
 from classifier.SimpleNet import pretrained_classifier as shapes_classifier
 from data_loader.data_loader import CelebALoader, ShapesLoader
 
-from explainer.ops import safe_log, convert_ordinal_to_binary
+from explainer.ops import safe_log
 from explainer.networks_128 import Discriminator_Ordinal as Discriminator_Ordinal_128
 from explainer.networks_128 import Generator_Encoder_Decoder as Generator_Encoder_Decoder_128
 from explainer.networks_128 import Discriminator_Contrastive as Discriminator_Contrastive_128
@@ -19,7 +19,7 @@ from explainer.networks_64 import Discriminator_Contrastive as Discriminator_Con
 import tensorflow.contrib.slim as slim
 import tensorflow as tf
 import numpy as np
-from utils import save_images, read_data_file
+from utils import save_images, read_data_file, convert_ordinal_to_binary
 from losses import *
 import pdb
 import yaml

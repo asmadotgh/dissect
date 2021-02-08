@@ -192,3 +192,21 @@ def absolute_name_scope(scope, reuse=tf.AUTO_REUSE):
     else:
         scope = tf.variable_scope('{}/{}/'.format(current_scope, scope), reuse=reuse)
     return scope
+
+
+def convert_ordinal_to_binary(y, n):
+    y = np.asarray(y).astype(int)
+    new_y = np.zeros([y.shape[0], n])
+    new_y[:, 0] = y
+    for i in range(0, y.shape[0]):
+        for j in range(1, y[i] + 1):
+            new_y[i, j] = 1
+    return new_y
+
+
+def safe_append(all_arr, curr_arr, axis=0):
+    if np.size(all_arr) == 0:
+        res = curr_arr
+    else:
+        res = np.append(all_arr, curr_arr, axis=axis)
+    return res

@@ -260,13 +260,3 @@ def KL(mu1, logvar1, mu2, logvar2):
     return tf.reduce_sum(
         safe_log(std2) - safe_log(std1) + 0.5 * (tf.exp(logvar1) + (mu1 - mu2) ** 2) / tf.exp(logvar2) - 0.5,
         axis=-1)
-
-
-def convert_ordinal_to_binary(y, n):
-    y = np.asarray(y).astype(int)
-    new_y = np.zeros([y.shape[0], n])
-    new_y[:, 0] = y
-    for i in range(0, y.shape[0]):
-        for j in range(1, y[i] + 1):
-            new_y[i, j] = 1
-    return new_y
