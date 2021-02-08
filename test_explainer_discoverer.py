@@ -25,16 +25,6 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 np.random.seed(0)
 
 
-def convert_ordinal_to_binary(y, n):
-    y = np.asarray(y).astype(int)
-    new_y = np.zeros([y.shape[0], n])
-    new_y[:, 0] = y
-    for i in range(0, y.shape[0]):
-        for j in range(1, y[i] + 1):
-            new_y[i, j] = 1
-    return new_y
-
-
 def test(config_path, dbg_img_label_dict=None, dbg_mode=False, export_output=True, dbg_size=10, dbg_img_indices=[]):
     # ============= Load config =============
 
@@ -149,23 +139,23 @@ def test(config_path, dbg_img_label_dict=None, dbg_mode=False, export_output=Tru
     real_source_logits = D(x_source, y_s, NUMS_CLASS, "NO_OPS")
     # TODO AG, currently G conditions on a one-hot vector of size NUMS_CLASS * k_dim. Make it more efficient?
     if disentangle:
-        fake_target_img, fake_target_img_embedding = G(x_source, train_phase,
+        fake_target_img, fake_target_img_embedding = G(x_source,
                                                        y_regularizer * NUMS_CLASS + y_target,
                                                        NUMS_CLASS * generation_dim)
-        fake_source_img, fake_source_img_embedding = G(fake_target_img, train_phase,
+        fake_source_img, fake_source_img_embedding = G(fake_target_img,
                                                        y_regularizer * NUMS_CLASS + y_source,
                                                        NUMS_CLASS * generation_dim)
-        fake_source_recons_img, x_source_img_embedding = G(x_source, train_phase,
+        fake_source_recons_img, x_source_img_embedding = G(x_source,
                                                            y_regularizer * NUMS_CLASS + y_source,
                                                            NUMS_CLASS * generation_dim)
         if HAS_MAIN_DIM:
-            fake_source_main_dim_img, fake_source_main_dim_img_embedding = G(fake_target_img, train_phase,
+            fake_source_main_dim_img, fake_source_main_dim_img_embedding = G(fake_target_img,
                                                                              k_dim * NUMS_CLASS + y_source,
                                                                              NUMS_CLASS * k_dim_plus)
     else:
-        fake_target_img, fake_target_img_embedding = G(x_source, train_phase, y_target, NUMS_CLASS)
-        fake_source_img, fake_source_img_embedding = G(fake_target_img, train_phase, y_source, NUMS_CLASS)
-        fake_source_recons_img, x_source_img_embedding = G(x_source, train_phase, y_source, NUMS_CLASS)
+        fake_target_img, fake_target_img_embedding = G(x_source, y_target, NUMS_CLASS)
+        fake_source_img, fake_source_img_embedding = G(fake_target_img, y_source, NUMS_CLASS)
+        fake_source_recons_img, x_source_img_embedding = G(x_source, y_source, NUMS_CLASS)
     fake_target_logits = D(fake_target_img, y_t, NUMS_CLASS, None)
 
     # ============= pre-trained classifier =============
