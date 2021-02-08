@@ -8,7 +8,7 @@ from classifier.DenseNet import pretrained_classifier as celeba_classifier
 from classifier.SimpleNet import pretrained_classifier as shapes_classifier
 from data_loader.data_loader import CelebALoader, ShapesLoader
 
-from explainer.ops import KL, safe_log, convert_ordinal_to_binary
+from explainer.ops import KL, safe_log
 
 from explainer.networks_128 import EncoderZ as EncoderZ_128
 from explainer.networks_128 import EncoderW as EncoderW_128
@@ -23,7 +23,7 @@ from explainer.networks_64 import DecoderY as DecoderY_64
 import tensorflow.contrib.slim as slim
 import tensorflow as tf
 import numpy as np
-from utils import save_images, save_image, read_data_file, make3d_tensor, make4d_tensor
+from utils import save_image, read_data_file, make3d_tensor, make4d_tensor, convert_ordinal_to_binary
 from losses import *
 import pdb
 import yaml
@@ -77,6 +77,8 @@ def train():
     input_size = config['input_size']
     NUMS_CLASS_cls = config['num_class']
     NUMS_CLASS = config['num_bins']
+    MU_CLUSTER = config['mu_cluster']
+    STEP_SIZE = MU_CLUSTER/(NUMS_CLASS - 1)
     target_class = config['target_class']
 
     # ADDED
@@ -146,12 +148,11 @@ def train():
 
     # ============= placeholder =============
     x_source = tf.placeholder(tf.float32, [None, input_size, input_size, channels], name='x_source')
-    y_s = tf.placeholder(tf.int32, [None, NUMS_CLASS], name='y_s')
-    y_source = y_s[:, 0]
+    y_s = tf.placeholder(tf.int32, [None, NUMS_CLASS_cls], name='y_s')
+    y_source = y_s[:, NUMS_CLASS_cls-1]
     train_phase = tf.placeholder(tf.bool, name='train_phase')
 
-    # TODO alternative traversal
-    # w_sample = tf.placeholder(tf.float32, [None, w_dim], name='w_sample')
+    y_target = tf.placeholder(tf.int32, [None, w_dim], name='y_target')  # between 0 and NUMS_CLASS TODO double check
 
     # ============= CSVAE =============
 
@@ -168,34 +169,37 @@ def train():
     # pass samples of z and w to get predictions of x
     pred_x = decoder_x(tf.concat([w, z], axis=-1))
     # get predicted labels based only on the latent subspace Z
-    pred_y = decoder_y(z, NUMS_CLASS)
+    pred_y = decoder_y(z, NUMS_CLASS_cls)
 
-    # TODO alternative traversal
-    # fake_img = decoder_x(tf.concat([w_sample, z], axis=-1))
-
+    # Create and save a grid of images
     fake_img_traversal = tf.zeros([0, input_size, input_size, channels])
-    TRAVERSALS = [0.0, 1.5, 3.]
     for i in range(w_dim):
-        for val in TRAVERSALS:
+        for j in range(NUMS_CLASS):
+            val = j * STEP_SIZE
             np_arr = np.zeros((BATCH_SIZE, w_dim))
             np_arr[:, i] = val
             tmp_w = tf.convert_to_tensor(np_arr, dtype=tf.float32)
             fake_img = decoder_x(tf.concat([tmp_w, z], axis=-1))
             fake_img_traversal = tf.concat([fake_img_traversal, fake_img], axis=0)
-    fake_img_traversal_board = make4d_tensor(fake_img_traversal, channels, input_size, w_dim, len(TRAVERSALS), BATCH_SIZE)
-    fake_img_traversal_save = make3d_tensor(fake_img_traversal, channels, input_size, w_dim, len(TRAVERSALS), BATCH_SIZE)
+    fake_img_traversal_board = make4d_tensor(fake_img_traversal, channels, input_size, w_dim, NUMS_CLASS, BATCH_SIZE)
+    fake_img_traversal_save = make3d_tensor(fake_img_traversal, channels, input_size, w_dim, NUMS_CLASS, BATCH_SIZE)
 
-    # TODO IMP double check if correct? need to reshape fake_img_traversal?
+    # Create a single image based on y_target
+    target_w = STEP_SIZE * tf.cast(y_target, dtype=tf.float32)  # TODO double check
+    fake_target_img = decoder_x(tf.concat([target_w, z], axis=-1))
+
     # ============= pre-trained classifier =============
-    # TODO IMP need predictions? currently not using classifier output AT ALL !!!
+    # TODO double check
+
     real_img_cls_logit_pretrained, real_img_cls_prediction = pretrained_classifier(x_source, NUMS_CLASS_cls,
                                                                                    reuse=False, name='classifier')
+    fake_recon_cls_logit_pretrained, fake_recon_cls_prediction = pretrained_classifier(pred_x, NUMS_CLASS_cls,
+                                                                                       reuse=True)
     fake_img_cls_logit_pretrained, fake_img_cls_prediction = pretrained_classifier(fake_img, NUMS_CLASS_cls,
                                                                                    reuse=True)
 
-    # ============= pre-trained classifier loss =============
-    # real_p = tf.reduce_mean(w_sample/3.0)
-    fake_q = fake_img_cls_prediction[:, target_class]
+    # ============= predicted probabilities =============
+    fake_target_p_tensor = tf.reduce_max(tf.cast(y_target, tf.float32) * 1.0 / float(NUMS_CLASS - 1), axis=1)
 
     # ============= Loss =============
     # OPTIMIZATION:
@@ -212,8 +216,8 @@ def train():
     kl1 = KL(mu1=mu_w, logvar1=logvar_w,
              mu2=tf.zeros_like(mu_w), logvar2=tf.ones_like(logvar_w) * np.log(0.01))
     # KL divergence for label 0
-    #    We want the latent subspace W for this label to be close to mean 3, var 0.01
-    kl0 = KL(mu1=mu_w, logvar1=logvar_w, mu2=tf.ones_like(mu_w) * 3., logvar2=tf.ones_like(logvar_w) * np.log(0.01))
+    #    We want the latent subspace W for this label to be close to mean 3, var 1
+    kl0 = KL(mu1=mu_w, logvar1=logvar_w, mu2=tf.ones_like(mu_w) * 3., logvar2=tf.ones_like(logvar_w) * np.log(1))
 
     loss_m1_1 = tf.reduce_sum(beta1 * tf.reduce_sum((x_source - pred_x) ** 2, axis=-1))  # corresponds to M1
     loss_m1_2 = tf.reduce_sum(
@@ -241,7 +245,7 @@ def train():
 
     # ============= summary =============
     real_img_sum = tf.summary.image('real_img', x_source)
-    fake_img_sum = tf.summary.image('fake_img', fake_img)
+    fake_img_sum = tf.summary.image('fake_target_img', fake_target_img)
     fake_img_traversal_sum = tf.summary.image('fake_img_traversal', fake_img_traversal_board)
 
     loss_m1_sum = tf.summary.scalar('losses/M1', loss_m1)
@@ -306,12 +310,13 @@ def train():
                                                                 num_channel=channels, do_center_crop=True)
 
             labels = labels.ravel()
-            target_labels = np.random.randint(0, high=NUMS_CLASS, size=BATCH_SIZE)
+            labels = np.eye(NUMS_CLASS_cls)[labels.astype(int)]
 
-            labels = convert_ordinal_to_binary(labels, NUMS_CLASS)
-            target_labels = convert_ordinal_to_binary(target_labels, NUMS_CLASS)
+            target_labels_probs = np.random.randint(0, high=NUMS_CLASS, size=BATCH_SIZE)
+            target_labels_w_ind = np.random.randint(0, high=w_dim, size=BATCH_SIZE)
+            target_labels = np.eye(w_dim)[target_labels_w_ind] * np.repeat(np.expand_dims(target_labels_probs, axis=-1), w_dim, axis=1)
 
-            my_feed_dict = {x_source: img, train_phase: True, y_s: labels}
+            my_feed_dict = {y_target: target_labels, x_source: img, train_phase: True, y_s: labels}
 
             _, par1_loss, par1_summary_str, overall_sum_str = sess.run([optimizer_1, loss1, part1_sum, overall_sum],
                                                                        feed_dict=my_feed_dict)
@@ -335,9 +340,14 @@ def train():
                                                                     do_center_crop=True)
 
                 labels = labels.ravel()
-                labels = convert_ordinal_to_binary(labels, NUMS_CLASS)
+                labels = np.eye(NUMS_CLASS_cls)[labels.astype(int)]
 
-                my_feed_dict = {x_source: img, train_phase: False,
+                target_labels_probs = np.random.randint(0, high=NUMS_CLASS, size=BATCH_SIZE)
+                target_labels_w_ind = np.random.randint(0, high=w_dim, size=BATCH_SIZE)
+                target_labels = np.eye(w_dim)[target_labels_w_ind] * np.repeat(
+                    np.expand_dims(target_labels_probs, axis=-1), w_dim, axis=1)
+
+                my_feed_dict = {y_target: target_labels, x_source: img, train_phase: False,
                                 y_s: labels}
 
                 sample_fake_img_traversal = sess.run(fake_img_traversal_save, feed_dict=my_feed_dict)
@@ -345,30 +355,6 @@ def train():
                 # save samples
                 sample_file = os.path.join(sample_dir, '%06d.jpg' % step)
                 save_image(sample_fake_img_traversal, sample_file)
-
-                # save_images(sample_fake_img_traversal, sample_file, num_samples=num_seed_imgs,
-                #             nums_class=3, k_dim=w_dim, image_size=input_size, num_channel=channels)
-
-                # TODO alternative traversal
-                # Sample w s here and pass through the model
-
-                # img_repeat = np.repeat(img, NUMS_CLASS * w_dim, 0)
-                #
-                # input_w = np.asarray([np.asarray(range(NUMS_CLASS)) for j in range(num_seed_imgs * w_dim)])
-                # input_w = target_labels.ravel()
-                # input_w = convert_ordinal_to_binary(target_labels, NUMS_CLASS)
-                #
-                # my_feed_dict = {x_source: img_repeat, train_phase: False,
-                #                 y_s: labels, w_sample: input_w}
-                #
-                # FAKE_IMG = sess.run([fake_img], feed_dict=my_feed_dict)
-                #
-                # output_fake_img = np.reshape(FAKE_IMG, [-1, w_dim, NUMS_CLASS, input_size, input_size, channels])
-                #
-                # # save samples
-                # sample_file = os.path.join(sample_dir, '%06d.jpg' % step)
-                # save_images(output_fake_img, sample_file, num_samples=num_seed_imgs,
-                #             nums_class=NUMS_CLASS, k_dim=w_dim, image_size=input_size, num_channel=channels)
 
             batch_counter = int(counter/2)
             if batch_counter % save_summary == 0:
