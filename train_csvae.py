@@ -185,6 +185,22 @@ def train():
     fake_img_traversal_board = make4d_tensor(fake_img_traversal, channels, input_size, w_dim, NUMS_CLASS, BATCH_SIZE)
     fake_img_traversal_save = make3d_tensor(fake_img_traversal, channels, input_size, w_dim, NUMS_CLASS, BATCH_SIZE)
 
+
+    # Create and save 2d traversal, this is relevant only for w_dim == 2
+    fake_2d_img_traversal = tf.zeros([0, input_size, input_size, channels])
+    for i in range(NUMS_CLASS):
+        for j in range(NUMS_CLASS):
+            val_0 = i * STEP_SIZE
+            val_1 = j * STEP_SIZE
+            np_arr = np.zeros((BATCH_SIZE, w_dim))
+            np_arr[:, 0] = val_0
+            np_arr[:, 1] = val_1
+            tmp_w = tf.convert_to_tensor(np_arr, dtype=tf.float32)
+            fake_2d_img = decoder_x(tf.concat([tmp_w, z], axis=-1))
+            fake_2d_img_traversal = tf.concat([fake_2d_img_traversal, fake_2d_img], axis=0)
+    fake_2d_img_traversal_board = make4d_tensor(fake_2d_img_traversal, channels, input_size, NUMS_CLASS, NUMS_CLASS, BATCH_SIZE)
+    fake_2d_img_traversal_save = make3d_tensor(fake_2d_img_traversal, channels, input_size, NUMS_CLASS, NUMS_CLASS, BATCH_SIZE)
+
     # Create a single image based on y_target
     target_w = STEP_SIZE * tf.cast(y_target, dtype=tf.float32) + OFFSET
     fake_target_img = decoder_x(tf.concat([target_w, z], axis=-1))
@@ -248,6 +264,7 @@ def train():
     fake_recon_img_sum = tf.summary.image('fake_recon_img', pred_x)
     fake_img_sum = tf.summary.image('fake_target_img', fake_target_img)
     fake_img_traversal_sum = tf.summary.image('fake_img_traversal', fake_img_traversal_board)
+    fake_2d_img_traversal_sum = tf.summary.image('fake_2d_img_traversal', fake_2d_img_traversal_board)
 
     loss_m1_sum = tf.summary.scalar('losses/M1', loss_m1)
     loss_m1_1_sum = tf.summary.scalar('losses/M1/m1_1', loss_m1_1)
@@ -262,7 +279,7 @@ def train():
     part2_sum = tf.summary.merge(
         [loss_n_sum, loss_sum, ])
     overall_sum = tf.summary.merge(
-        [loss_sum, real_img_sum, fake_recon_img_sum, fake_img_sum, fake_img_traversal_sum])
+        [loss_sum, real_img_sum, fake_recon_img_sum, fake_img_sum, fake_img_traversal_sum, fake_2d_img_traversal_sum])
 
     # ============= session =============
     sess = tf.Session()
@@ -351,11 +368,14 @@ def train():
                 my_feed_dict = {y_target: target_labels, x_source: img, train_phase: False,
                                 y_s: labels}
 
-                sample_fake_img_traversal = sess.run(fake_img_traversal_save, feed_dict=my_feed_dict)
+                sample_fake_img_traversal, sample_fake_2d_img_traversal = sess.run([fake_img_traversal_save, fake_img_traversal_save], feed_dict=my_feed_dict)
 
                 # save samples
                 sample_file = os.path.join(sample_dir, '%06d.jpg' % step)
                 save_image(sample_fake_img_traversal, sample_file)
+
+                sample_file = os.path.join(sample_dir, '%06d_2d.jpg' % step)
+                save_image(sample_fake_2d_img_traversal, sample_file)
 
             batch_counter = int(counter/2)
             if batch_counter % save_summary == 0:
