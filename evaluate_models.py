@@ -63,9 +63,15 @@ def calc_distinct(results_dict):
     EPOCHS = config['metrics_epochs']
     TEST_RATIO = config['metrics_test_ratio']
     NUM_BINS = config['num_bins']
-    K_DIM = config['k_dim']
+    if 'k_dim' in config.keys():
+        N_KNOBS = config['k_dim']
+    elif 'w_dim' in config.keys():
+        N_KNOBS = config['w_dim']
+    else:
+        print('Number of knobs not specified. Returning...')
+        return {}
     TARGET_CLASS = config['target_class']
-    if K_DIM <= 1:
+    if N_KNOBS <= 1:
         print('This model has only one dimension. Distinctness metrics are not applicable.')
         return {}
     channels = config['num_channel']
@@ -75,9 +81,9 @@ def calc_distinct(results_dict):
     data = _EMPTY_ARR
     labels = _EMPTY_ARR
     source_len = len(results_dict['real_imgs'])
-    for dim in range(K_DIM):
+    for dim in range(N_KNOBS):
         for bin_i in range(NUM_BINS):
-            fake_inds = np.array(range(source_len))*K_DIM*NUM_BINS + dim*NUM_BINS + bin_i
+            fake_inds = np.array(range(source_len))*N_KNOBS*NUM_BINS + dim*NUM_BINS + bin_i
             data_dim_bin = np.append(results_dict['real_imgs'], results_dict['fake_t_imgs'][fake_inds], axis=-1)
             # dimension dim has been switched
             switched_dim = np.ones(source_len, dtype=int)*dim
@@ -85,7 +91,7 @@ def calc_distinct(results_dict):
             # in which no dimension has been switched
             fixed_indices = (np.around(results_dict['real_ps'][fake_inds][:, TARGET_CLASS], decimals=2) ==
                              results_dict['fake_target_ps'][fake_inds])
-            labels_dim_bin = np.eye(K_DIM)[switched_dim]
+            labels_dim_bin = np.eye(N_KNOBS)[switched_dim]
             labels_dim_bin[fixed_indices] = 0
             data = safe_append(data, data_dim_bin)
             labels = safe_append(labels, labels_dim_bin)
@@ -105,7 +111,7 @@ def calc_distinct(results_dict):
         y = tf.placeholder(tf.float32, [None, 2], name='y-input')
         isTrain = tf.placeholder(tf.bool)
     # ============= Model =============
-    logit, prediction = classifier_distinct_64(x_, num_dims=K_DIM, isTrain=isTrain)
+    logit, prediction = classifier_distinct_64(x_, num_dims=N_KNOBS, isTrain=isTrain)
     classif_loss = tf.losses.sigmoid_cross_entropy(multi_class_labels=y, logits=logit)
     acc = calc_accuracy(prediction=prediction, labels=y)
     loss = tf.losses.get_total_loss()
@@ -208,6 +214,7 @@ def calc_realistic(results_dict, config):
         os.makedirs(logs_dir)
 
     # ============= Experiment Parameters =============
+    BATCH_SIZE = config['metrics_batch_size']
     BATCH_SIZE = config['metrics_batch_size']
     EPOCHS = config['metrics_epochs']
     TEST_RATIO = config['metrics_test_ratio']
@@ -317,6 +324,8 @@ def calc_realistic(results_dict, config):
     metrics_dict = {}
     for metric in ['accuracy', 'precision', 'recall']:
         metrics_dict.update({'realistic_{}'.format(metric): [eval(metric)]})
+
+    # TODO: Add FID between real images and explanations
 
     print('Metrics successfully calculated: Realistic')
     return metrics_dict
