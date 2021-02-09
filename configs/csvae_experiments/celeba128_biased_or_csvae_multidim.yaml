@@ -29,6 +29,8 @@ epochs: 23000
 
 # CSVAE params
 mu_cluster: 3.0
+var_cluster: 1.0
+traversal_n_sigma: 2 # traverse from mu-x*sigma, mu+x*sigma
 
 beta1: 20.
 beta2: 1.

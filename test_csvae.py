@@ -54,7 +54,10 @@ def test(config_path, dbg_img_label_dict=None, dbg_mode=False, export_output=Tru
     NUMS_CLASS_cls = config['num_class']
     NUMS_CLASS = config['num_bins']
     MU_CLUSTER = config['mu_cluster']
-    STEP_SIZE = MU_CLUSTER / (NUMS_CLASS - 1)
+    VAR_CLUSTER = config['var_cluster']
+    TRAVERSAL_N_SIGMA = config['traversal_n_sigma']
+    STEP_SIZE = 2*TRAVERSAL_N_SIGMA * VAR_CLUSTER/(NUMS_CLASS - 1)
+    OFFSET = MU_CLUSTER - TRAVERSAL_N_SIGMA * VAR_CLUSTER
     target_class = config['target_class']
     ckpt_dir_continue = ckpt_dir
     if dbg_img_label_dict is not None:
@@ -154,7 +157,7 @@ def test(config_path, dbg_img_label_dict=None, dbg_mode=False, export_output=Tru
     pred_y = decoder_y(z, NUMS_CLASS_cls)
 
     # Create a single image based on y_target
-    target_w = STEP_SIZE * tf.cast(y_target, dtype=tf.float32)
+    target_w = STEP_SIZE * tf.cast(y_target, dtype=tf.float32) + OFFSET
     fake_target_img = decoder_x(tf.concat([target_w, z], axis=-1))
 
     # ============= pre-trained classifier =============

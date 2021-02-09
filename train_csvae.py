@@ -78,7 +78,10 @@ def train():
     NUMS_CLASS_cls = config['num_class']
     NUMS_CLASS = config['num_bins']
     MU_CLUSTER = config['mu_cluster']
-    STEP_SIZE = MU_CLUSTER/(NUMS_CLASS - 1)
+    VAR_CLUSTER = config['var_cluster']
+    TRAVERSAL_N_SIGMA = config['traversal_n_sigma']
+    STEP_SIZE = 2*TRAVERSAL_N_SIGMA * VAR_CLUSTER/(NUMS_CLASS - 1)
+    OFFSET = MU_CLUSTER - TRAVERSAL_N_SIGMA*VAR_CLUSTER
     target_class = config['target_class']
 
     # CSVAE parameters
@@ -183,7 +186,7 @@ def train():
     fake_img_traversal_save = make3d_tensor(fake_img_traversal, channels, input_size, w_dim, NUMS_CLASS, BATCH_SIZE)
 
     # Create a single image based on y_target
-    target_w = STEP_SIZE * tf.cast(y_target, dtype=tf.float32)
+    target_w = STEP_SIZE * tf.cast(y_target, dtype=tf.float32) + OFFSET
     fake_target_img = decoder_x(tf.concat([target_w, z], axis=-1))
 
     # ============= pre-trained classifier =============
@@ -213,8 +216,8 @@ def train():
     kl1 = KL(mu1=mu_w, logvar1=logvar_w,
              mu2=tf.zeros_like(mu_w), logvar2=tf.ones_like(logvar_w) * np.log(0.01))
     # KL divergence for label 0
-    #    We want the latent subspace W for this label to be close to mean 3, var 1
-    kl0 = KL(mu1=mu_w, logvar1=logvar_w, mu2=tf.ones_like(mu_w) * 3., logvar2=tf.ones_like(logvar_w) * np.log(1))
+    #    We want the latent subspace W for this label to be close to mean MU_CLUSTER, var VAR_CLUSTER
+    kl0 = KL(mu1=mu_w, logvar1=logvar_w, mu2=tf.ones_like(mu_w) * MU_CLUSTER, logvar2=tf.ones_like(logvar_w) * np.log(VAR_CLUSTER))
 
     loss_m1_1 = tf.reduce_sum(beta1 * tf.reduce_sum((x_source - pred_x) ** 2, axis=-1))  # corresponds to M1
     loss_m1_2 = tf.reduce_sum(
