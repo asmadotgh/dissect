@@ -16,7 +16,7 @@ name: 'shapes_redcyan_csvae_multidim' #name of the folder at the above address
 num_channel: 3
 num_class: 2
 #number of classes in classifier
-num_bins: 3
+num_bins: 5
 #number of bins the output class probability between [0,1] is discretized into.
 target_class: 1
 #the class for which explanation has to be generated
