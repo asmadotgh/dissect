@@ -1,4 +1,5 @@
-from test_explainer_discoverer import test
+from test_explainer_discoverer import test as test_discoverer
+from test_csvae import test as test_csvae
 import os
 import numpy as np
 import pandas as pd
@@ -45,6 +46,8 @@ def calc_influential(results_dict, target_class):
     for metric in ['MSE', 'KL', 'pearson_r', 'pearson_p', 'spearman_r', 'spearman_p']:
         metrics_dict.update({'influential_{}'.format(metric): [eval(metric)]})
     print('Metrics successfully calculated: Influential')
+
+    # TODO Faithfulness: Are “relevant” features truly relevant?
     return metrics_dict
 
 
@@ -207,14 +210,13 @@ def calc_realistic(results_dict, config):
     tf.reset_default_graph()
     print('Calculating metrics for: Realistic')
 
-    # ============= Metrics Folder - Distinct =============
+    # ============= Metrics Folder - Realistic =============
     output_dir = os.path.join(config['log_dir'], config['name'], 'test', 'metrics', 'realistic')
     logs_dir = os.path.join(output_dir, 'logs')
     if not os.path.exists(logs_dir):
         os.makedirs(logs_dir)
 
     # ============= Experiment Parameters =============
-    BATCH_SIZE = config['metrics_batch_size']
     BATCH_SIZE = config['metrics_batch_size']
     EPOCHS = config['metrics_epochs']
     TEST_RATIO = config['metrics_test_ratio']
@@ -325,15 +327,85 @@ def calc_realistic(results_dict, config):
     for metric in ['accuracy', 'precision', 'recall']:
         metrics_dict.update({'realistic_{}'.format(metric): [eval(metric)]})
 
-    # TODO: Add FID between real images and explanations
+    # TODO: Add FID between real images and explanations?
 
     print('Metrics successfully calculated: Realistic')
+    return metrics_dict
+
+
+# Second, we define the substitutability metric as follows: Let an original train- ing set Dtrain = {(xi,yi|i = 1..N},
+# a test set Dtest, and a classifier F(x) → y whose empirical performance on the test set is some score S. Given a
+# new set of model-generated boundary-crossing images Dtrans = {(x′i,yi′|i = 1..N} we say that this set is
+# R%−substitutable if our classifier can be retrained using Dtrans to achieve performance that is R% of S.
+# For example, if our original dataset and classifier yield 90% performance, and we substitute a generated dataset for
+# our original dataset and a re-trained classifier yields 45%, we would say the new dataset is 50% substitutable.
+def calc_substitutability(results_dict):
+    print('Calculating metrics for: Substitutability')
+
+    sub_inds = np.logical_or(results_dict['fake_target_ps'] == 0.0, results_dict['fake_target_ps'] == 1.)
+    labels = 1 * (results_dict['fake_target_ps'][sub_inds] > 0.5)
+    pred = results_dict['fake_ps'][sub_inds]
+
+    accuracy, precision, recall = calc_metrics_arr(np.argmax(pred, axis=1), labels)
+
+    print('Substitutability - accuracy: {:.3f}, precision: {:.3f}, recall: {:.3f}'.format(accuracy, precision, recall))
+    metrics_dict = {}
+    for metric in ['accuracy', 'precision', 'recall']:
+        metrics_dict.update({'substitutability_{}'.format(metric): [eval(metric)]})
+
+    print('Metrics successfully calculated: Substitutability')
+    return metrics_dict
+
+
+# TODO add stability: how coherent are explanations for similar inputs
+# https://github.com/GDPlumb/ExpO/blob/fdc80bdd09d02c3345a17365105d2fda804eb40b/Code/ExplanationMetrics.py#L151
+def calc_stability(results_dict, config):
+    print('Calculating metrics for: Stability')
+    num_randoms = config['metrics_stability_nx']
+    num_imgs = len(results_dict['fake_t_imgs'])
+    num_pixes = config['input_size']*config['input_size']*config['num_channel']
+    NUMS_CLASS_cls = config['num_class']
+    l2_fake_t_img = 0
+    l2_fake_s_recon_img = 0
+    l2_recon_p = 0
+    l2_fake_p = 0
+
+    def _sq_diff(x, y):
+        return np.sum((x-y)**2)
+
+    for i in range(num_randoms):
+        sub_inds = np.arange(num_imgs)*num_randoms + i
+        l2_fake_t_img += _sq_diff(results_dict['fake_t_imgs'], results_dict['stability_fake_t_imgs'][sub_inds])
+        l2_fake_s_recon_img += _sq_diff(results_dict['fake_s_recon_imgs'], results_dict['stability_fake_s_recon_imgs'][sub_inds])
+        l2_recon_p += _sq_diff(results_dict['recon_ps'], results_dict['stability_recon_ps'][sub_inds])
+        l2_fake_p += _sq_diff(results_dict['fake_ps'], results_dict['stability_fake_ps'][sub_inds])
+
+    l2_fake_t_img = l2_fake_t_img/(num_randoms*num_imgs*num_pixes)
+    l2_fake_s_recon_img = l2_fake_s_recon_img/(num_randoms*num_imgs*num_pixes)
+    l2_recon_p = l2_recon_p/(num_randoms*num_imgs*NUMS_CLASS_cls)
+    l2_fake_p = l2_fake_p/(num_randoms*num_imgs*NUMS_CLASS_cls)
+
+    print('Stability - l2_fake_t_img: {:.3f}, l2_fake_s_recon_img: {:.3f}, l2_recon_p: {:.3f}, l2_fake_p:{:.3f}'.format(
+        l2_fake_t_img, l2_fake_s_recon_img, l2_recon_p, l2_fake_p))
+    metrics_dict = {}
+    for metric in ['l2_fake_t_img', 'l2_fake_s_recon_img', 'l2_recon_p', 'l2_fake_p']:
+        metrics_dict.update({'stability_{}'.format(metric): [eval(metric)]})
+
+    print('Metrics successfully calculated: Stability')
     return metrics_dict
 
 
 def evaluate(results_dict, config, output_dir=None, export_output=True):
     target_class = config['target_class']
     metrics_dict = {}
+
+    # Stability
+    stability_dict = calc_stability(results_dict, config)
+    metrics_dict.update(stability_dict)
+
+    # Substitutability
+    substitutability_dict = calc_substitutability(results_dict)
+    metrics_dict.update(substitutability_dict)
 
     # influential
     influential_dict = calc_influential(results_dict, target_class)
@@ -360,8 +432,11 @@ def get_results_from_file(output_dir):
     # Read Explainer/Discoverer Results
     # files_to_load = ['names', 'real_imgs', 'fake_t_imgs', 'fake_t_embeds', 'fake_s_imgs', 'fake_s_embeds',
     #                  'fake_s_recon_imgs', 's_embeds', 'real_ps', 'recon_ps', 'fake_target_ps', 'fake_ps']
-    # only loading the subset needed for the analyeses:
-    files_to_load = ['real_imgs', 'fake_t_imgs', 'real_ps', 'fake_target_ps', 'fake_ps']
+    # only loading the subset needed for the analyses:
+    files_to_load = ['real_imgs', 'fake_t_imgs', 'real_ps', 'fake_target_ps', 'fake_ps',
+                     'fake_s_recon_imgs', 'recon_ps',
+                     'stability_fake_t_imgs', 'stability_fake_s_recon_imgs', 'stability_recon_ps','stability_fake_ps'
+    ]
     results_dict = {}
     for fname in files_to_load:
         curr_file = os.path.join(output_dir, fname+'.npy')
@@ -385,8 +460,13 @@ if __name__ == "__main__":
     try:
         results_dict = get_results_from_file(out_dir)
     except:
-        print('Results files do not exist. Running test explainer/discoverer to produce results...')
-        results_dict = test(args.config)
+        print('Results files do not exist. Running test explainer/discoverer/CSVAE to produce results...')
+        if 'w_dim' in config.keys():
+            results_dict = test_csvae(args.config)
+        elif 'k_dim' in config.keys():
+            results_dict = test_discoverer(args.config)
+        else:
+            raise Exception('Config file not supported. Either CSVAE type or explainer/discoverer type...')
         pass
 
     metrics_dir = os.path.join(out_dir, 'metrics')
