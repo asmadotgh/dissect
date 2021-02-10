@@ -58,6 +58,9 @@ def test(config_path, dbg_img_label_dict=None, dbg_mode=False, export_output=Tru
     TRAVERSAL_N_SIGMA = config['traversal_n_sigma']
     STEP_SIZE = 2*TRAVERSAL_N_SIGMA * VAR_CLUSTER/(NUMS_CLASS - 1)
     OFFSET = MU_CLUSTER - TRAVERSAL_N_SIGMA * VAR_CLUSTER
+
+    metrics_stability_nx = config['metrics_stability_nx']
+    metrics_stability_var = config['metrics_stability_var']
     target_class = config['target_class']
     ckpt_dir_continue = ckpt_dir
     if dbg_img_label_dict is not None:
@@ -212,6 +215,12 @@ def test(config_path, dbg_img_label_dict=None, dbg_mode=False, export_output=Tru
     fake_target_ps = np.empty([num_samples * generation_dim * NUMS_CLASS])
     fake_ps = np.empty([num_samples * generation_dim * NUMS_CLASS, NUMS_CLASS_cls])
 
+    # For stability metric
+    stability_fake_t_imgs = np.empty([num_samples * generation_dim * NUMS_CLASS*metrics_stability_nx, input_size, input_size, channels])
+    stability_fake_s_recon_imgs = np.empty([num_samples * generation_dim * NUMS_CLASS*metrics_stability_nx, input_size, input_size, channels])
+    stability_recon_ps = np.empty([num_samples * generation_dim * NUMS_CLASS*metrics_stability_nx, NUMS_CLASS_cls])
+    stability_fake_ps = np.empty([num_samples * generation_dim * NUMS_CLASS*metrics_stability_nx, NUMS_CLASS_cls])
+
     # TODO: can later save embeddings if needed
     # fake_t_embeds_z = np.empty([num_samples * generation_dim * NUMS_CLASS] + z_dim)
     # fake_t_embeds_w = np.empty([num_samples * generation_dim * NUMS_CLASS] + w_dim)
@@ -222,7 +231,9 @@ def test(config_path, dbg_img_label_dict=None, dbg_mode=False, export_output=Tru
 
     arrs_to_save = [
         'names', 'real_imgs', 'fake_t_imgs', 'fake_s_recon_imgs',
-        'real_ps', 'recon_ps', 'fake_target_ps', 'fake_ps']
+        'real_ps', 'recon_ps', 'fake_target_ps', 'fake_ps',
+        'stability_fake_t_imgs', 'stability_fake_s_recon_imgs', 'stability_recon_ps', 'stability_fake_ps'
+    ]
     # TODO: can later save embeddings if needed
     # , 's_embeds_z', 's_embeds_w', 'fake_s_embeds_z', 'fake_s_embeds_w', 'fake_t_embeds_z', 'fake_t_embeds_w']
 
@@ -257,7 +268,34 @@ def test(config_path, dbg_img_label_dict=None, dbg_mode=False, export_output=Tru
         start_ind = i * BATCH_SIZE
         end_ind = (i + 1) * BATCH_SIZE
         multiplier = generation_dim * NUMS_CLASS
+        metric_multiplier = generation_dim * NUMS_CLASS * metrics_stability_nx
         names[start_ind: end_ind] = np.asarray(image_paths)
+
+        stability_fake_t_img = np.empty([BATCH_SIZE*generation_dim * NUMS_CLASS*metrics_stability_nx, input_size, input_size, channels])
+        stability_fake_s_recon_img = np.empty([BATCH_SIZE*generation_dim * NUMS_CLASS*metrics_stability_nx, input_size, input_size, channels])
+        stability_recon_p = np.empty([BATCH_SIZE*generation_dim * NUMS_CLASS*metrics_stability_nx, NUMS_CLASS_cls])
+        stability_fake_p = np.empty([BATCH_SIZE*generation_dim * NUMS_CLASS*metrics_stability_nx, NUMS_CLASS_cls])
+
+        for j in range(metrics_stability_nx):
+            _start_ind = j * BATCH_SIZE * multiplier
+            _end_ind = (j + 1) * BATCH_SIZE * multiplier
+            noisy_img = img + np.random.normal(loc=0.0, scale=metrics_stability_var, size=np.shape(img))
+            stability_img_repeat = np.repeat(noisy_img, NUMS_CLASS * generation_dim, 0)
+            stability_feed_dict = {y_target: target_labels, x_source: stability_img_repeat, train_phase: False,
+                                   y_s: labels}
+            _stability_fake_t_img, _stability_fake_s_recon_img, _stability_recon_p, _stability_fake_p = sess.run(
+                [fake_target_img, pred_x, fake_recon_cls_prediction, fake_img_cls_prediction],
+                feed_dict=stability_feed_dict)
+            # TODO could improve speed by doing it in one step
+            stability_fake_t_img[_start_ind: _end_ind] = _stability_fake_t_img
+            stability_fake_s_recon_img[_start_ind: _end_ind] = _stability_fake_s_recon_img
+            stability_recon_p[_start_ind: _end_ind] = _stability_recon_p
+            stability_fake_p[_start_ind: _end_ind] = _stability_fake_p
+
+        stability_fake_t_imgs[start_ind * metric_multiplier: end_ind * metric_multiplier] = stability_fake_t_img
+        stability_fake_s_recon_imgs[start_ind * metric_multiplier: end_ind * metric_multiplier] = stability_fake_s_recon_img
+        stability_recon_ps[start_ind * metric_multiplier: end_ind * metric_multiplier] = stability_recon_p
+        stability_fake_ps[start_ind * metric_multiplier: end_ind * metric_multiplier] = stability_fake_p
 
         real_imgs[start_ind: end_ind] = img
         fake_t_imgs[start_ind * multiplier: end_ind * multiplier] = fake_t_img
