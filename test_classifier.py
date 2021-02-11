@@ -23,7 +23,7 @@ import matplotlib.pyplot as plt
 
 def test(config, overwrite_output_dir=None):
     # ============= Experiment Folder=============
-    if overwrite_output_dir is not None: # TODO
+    if overwrite_output_dir is not None:
         output_dir = overwrite_output_dir
     else:
         output_dir = os.path.join(config['log_dir'], config['name'])
