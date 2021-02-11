@@ -21,9 +21,12 @@ from sklearn.metrics import brier_score_loss, roc_auc_score, accuracy_score, rec
 import matplotlib.pyplot as plt
 
 
-def test(config):
+def test(config, overwrite_output_dir=None):
     # ============= Experiment Folder=============
-    output_dir = os.path.join(config['log_dir'], config['name'])
+    if overwrite_output_dir is not None: # TODO
+        output_dir = overwrite_output_dir
+    else:
+        output_dir = os.path.join(config['log_dir'], config['name'])
     classifier_output_path = os.path.join(output_dir, 'classifier_output')
     try:
         os.makedirs(classifier_output_path)
@@ -92,7 +95,7 @@ def test(config):
     lst_vars = []
     for v in tf.global_variables():
         lst_vars.append(v)
-        # ============= Session =============
+    # ============= Session =============
     sess = tf.InteractiveSession()
     saver = tf.train.Saver(var_list=lst_vars)
     tf.global_variables_initializer().run()
@@ -106,7 +109,7 @@ def test(config):
             sys.exit()
     else:
         sys.exit()
-    # ============= Testing Save the Output =============
+    # ============= Testing - Save the Output =============
 
     def get_predictions(data, subset_name):
         names = np.empty([0])
@@ -188,7 +191,8 @@ def create_dataframe(names, prediction_y, true_y,
                      names_i, prediction_y_i, true_y_i, n_bins, current_index=0, current_index_prob=1):
     df_train_results = pd.DataFrame(
         data={'filename': names, 'label': true_y[:, current_index], 'prob': prediction_y[:, current_index_prob]})
-    df_train_results['bin'] = np.floor(df_train_results["prob"].astype('float') * n_bins).astype('int')
+    df_train_results['bin'] = np.minimum(
+        np.floor(df_train_results["prob"].astype('float') * n_bins).astype('int'), n_bins-1)
     print('Train set size: ', df_train_results.shape)
     print('Number of points in each bin - Train: ', np.unique(df_train_results['bin'], return_counts=True))
 
@@ -267,6 +271,7 @@ def save_output(df_bin_all, df_train_results, df_test_results, experiment_dir, n
     second_line = ''
     for i in range(n_bins):
         second_line += '[{:.2f} {:.2f}) '.format(i * step, (i + 1) * step)
+    second_line = second_line[:-2]+'] '
     second_line += '\n'
     with open(os.path.join(experiment_dir, output_fname), 'r+') as fp:
         lines = fp.readlines()  # lines is list of line, each element '...\n'
