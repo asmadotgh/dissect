@@ -265,20 +265,21 @@ def test(config_path, dbg_img_label_dict=None, dbg_mode=False, export_output=Tru
              real_img_cls_prediction, fake_recon_cls_prediction, fake_target_p_tensor, fake_img_cls_prediction],
             feed_dict=my_feed_dict)
 
+        _num_cur_samples = min(data.shape[0] - i * BATCH_SIZE, BATCH_SIZE)
         start_ind = i * BATCH_SIZE
-        end_ind = (i + 1) * BATCH_SIZE
+        end_ind = start_ind + _num_cur_samples
         multiplier = generation_dim * NUMS_CLASS
         metric_multiplier = generation_dim * NUMS_CLASS * metrics_stability_nx
         names[start_ind: end_ind] = np.asarray(image_paths)
 
-        stability_fake_t_img = np.empty([BATCH_SIZE*generation_dim * NUMS_CLASS*metrics_stability_nx, input_size, input_size, channels])
-        stability_fake_s_recon_img = np.empty([BATCH_SIZE*generation_dim * NUMS_CLASS*metrics_stability_nx, input_size, input_size, channels])
-        stability_recon_p = np.empty([BATCH_SIZE*generation_dim * NUMS_CLASS*metrics_stability_nx, NUMS_CLASS_cls])
-        stability_fake_p = np.empty([BATCH_SIZE*generation_dim * NUMS_CLASS*metrics_stability_nx, NUMS_CLASS_cls])
+        stability_fake_t_img = np.empty([_num_cur_samples*generation_dim * NUMS_CLASS*metrics_stability_nx, input_size, input_size, channels])
+        stability_fake_s_recon_img = np.empty([_num_cur_samples*generation_dim * NUMS_CLASS*metrics_stability_nx, input_size, input_size, channels])
+        stability_recon_p = np.empty([_num_cur_samples*generation_dim * NUMS_CLASS*metrics_stability_nx, NUMS_CLASS_cls])
+        stability_fake_p = np.empty([_num_cur_samples*generation_dim * NUMS_CLASS*metrics_stability_nx, NUMS_CLASS_cls])
 
         for j in range(metrics_stability_nx):
-            _start_ind = j * BATCH_SIZE * multiplier
-            _end_ind = (j + 1) * BATCH_SIZE * multiplier
+            _start_ind = j * _num_cur_samples * multiplier
+            _end_ind = (j+1) * _num_cur_samples * multiplier
             noisy_img = img + np.random.normal(loc=0.0, scale=metrics_stability_var, size=np.shape(img))
             stability_img_repeat = np.repeat(noisy_img, NUMS_CLASS * generation_dim, 0)
             stability_feed_dict = {y_target: target_labels, x_source: stability_img_repeat, train_phase: False,
@@ -286,7 +287,7 @@ def test(config_path, dbg_img_label_dict=None, dbg_mode=False, export_output=Tru
             _stability_fake_t_img, _stability_fake_s_recon_img, _stability_recon_p, _stability_fake_p = sess.run(
                 [fake_target_img, pred_x, fake_recon_cls_prediction, fake_img_cls_prediction],
                 feed_dict=stability_feed_dict)
-            # TODO could improve speed by doing it in one step
+            # TODO could improve speed by doing it in one step: problem with sizes
             stability_fake_t_img[_start_ind: _end_ind] = _stability_fake_t_img
             stability_fake_s_recon_img[_start_ind: _end_ind] = _stability_fake_s_recon_img
             stability_recon_p[_start_ind: _end_ind] = _stability_recon_p
