@@ -13,6 +13,10 @@ import tensorflow as tf
 from utils import calc_metrics_arr, calc_accuracy, safe_append
 from sklearn.metrics import mean_squared_error
 import math
+from train_classifier import train as train_classif
+from test_classifier import test as test_classif
+from utils import read_data_file
+from data_loader.data_loader import CelebALoader, ShapesLoader
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 np.random.seed(0)
@@ -30,8 +34,8 @@ def _save_csv(out_dir, out_dict):
 
 def calc_influential(results_dict, target_class):
     print('Calculating metrics for: Influential')
-    p = results_dict['fake_target_ps']
-    q = results_dict['fake_ps'][:, target_class]
+    p = results_dict['fake_target_ps'].flatten()
+    q = results_dict['fake_ps'][:, :, :, target_class].flatten()
     MSE = mean_squared_error(p, q)
     KL = entropy(p, q)
     pearson_r, pearson_p = pearsonr(p, q)
@@ -86,19 +90,17 @@ def calc_distinct(results_dict):
     source_len = len(results_dict['real_imgs'])
     for dim in range(N_KNOBS):
         for bin_i in range(NUM_BINS):
-            fake_inds = np.array(range(source_len))*N_KNOBS*NUM_BINS + dim*NUM_BINS + bin_i
-            data_dim_bin = np.append(results_dict['real_imgs'], results_dict['fake_t_imgs'][fake_inds], axis=-1)
+            data_dim_bin = np.append(results_dict['real_imgs'], results_dict['fake_t_imgs'][:, dim, bin_i], axis=-1)
             # dimension dim has been switched
             switched_dim = np.ones(source_len, dtype=int)*dim
             # unless the real probability and fake target probability are the same,
             # in which no dimension has been switched
-            fixed_indices = (np.around(results_dict['real_ps'][fake_inds][:, TARGET_CLASS], decimals=2) ==
-                             results_dict['fake_target_ps'][fake_inds])
+            fixed_indices = (np.around(results_dict['real_ps'][:, dim, bin_i, TARGET_CLASS], decimals=2) ==
+                             results_dict['fake_target_ps'][:, dim, bin_i])
             labels_dim_bin = np.eye(N_KNOBS)[switched_dim]
             labels_dim_bin[fixed_indices] = 0
             data = safe_append(data, data_dim_bin)
             labels = safe_append(labels, labels_dim_bin)
-
     data_len = len(data)
     data_inds = np.array(range(data_len))
     np.random.shuffle(data_inds)
@@ -222,14 +224,22 @@ def calc_realistic(results_dict, config):
     TEST_RATIO = config['metrics_test_ratio']
     channels = config['num_channel']
     input_size = config['input_size']
-    dataset = config['dataset']
+    NUM_BINS = config['num_bins']
+    if 'k_dim' in config.keys():
+        N_KNOBS = config['k_dim']
+    elif 'w_dim' in config.keys():
+        N_KNOBS = config['w_dim']
+    else:
+        print('Number of knobs not specified. Returning...')
+        return {}
     # ============= Data =============
     half_len = len(results_dict['real_imgs'])
     data_real = results_dict['real_imgs']
-    fake_inds = np.array(range(len(results_dict['fake_t_imgs'])))
-    np.random.shuffle(fake_inds)
-    fake_inds = fake_inds[0:half_len]
-    data_fake = results_dict['fake_t_imgs'][fake_inds]
+    fake_inds = np.arange(half_len)
+    fake_knob = np.random.randint(low=0, high=N_KNOBS, size=half_len)
+    fake_bin = np.random.randint(low=0, high=NUM_BINS, size=half_len)
+    data_fake = results_dict['fake_t_imgs'][fake_inds, fake_knob, fake_bin]
+
     data = np.append(data_real, data_fake, axis=0)
     labels = np.append(np.ones(half_len), np.zeros(half_len), axis=0)
     data_len = len(data)
@@ -333,20 +343,67 @@ def calc_realistic(results_dict, config):
     return metrics_dict
 
 
-# Second, we define the substitutability metric as follows: Let an original train- ing set Dtrain = {(xi,yi|i = 1..N},
-# a test set Dtest, and a classifier F(x) → y whose empirical performance on the test set is some score S. Given a
-# new set of model-generated boundary-crossing images Dtrans = {(x′i,yi′|i = 1..N} we say that this set is
-# R%−substitutable if our classifier can be retrained using Dtrans to achieve performance that is R% of S.
-# For example, if our original dataset and classifier yield 90% performance, and we substitute a generated dataset for
-# our original dataset and a re-trained classifier yields 45%, we would say the new dataset is 50% substitutable.
-def calc_substitutability(results_dict):
+def calc_substitutability(config):
+    # Used in Samangoui et al.
+    # We define the substitutability metric as follows: Let an original train- ing set Dtrain = {(xi,yi|i = 1..N},
+    # a test set Dtest, and a classifier F(x) → y whose empirical performance on the test set is some score S. Given a
+    # new set of model-generated boundary-crossing images Dtrans = {(x′i,yi′|i = 1..N} we say that this set is
+    # R%−substitutable if our classifier can be retrained using Dtrans to achieve performance that is R% of S.
+    # For example, if our original dataset and classifier yield 90% performance, and we substitute a generated dataset for
+    # our original dataset and a re-trained classifier yields 45%, we would say the new dataset is 50% substitutable.
+    tf.reset_default_graph()
     print('Calculating metrics for: Substitutability')
 
-    sub_inds = np.logical_or(results_dict['fake_target_ps'] == 0.0, results_dict['fake_target_ps'] == 1.)
-    labels = 1 * (results_dict['fake_target_ps'][sub_inds] > 0.5)
-    pred = results_dict['fake_ps'][sub_inds]
+    # TODO
+    # may get into trouble with memory if loading all images instead of reading from file
+    # but can't directly save in test_csvae.py or test_discoverer.py because they use a different subset of images
+    # so change their input and call the function here, might be more efficient to train these classifiers used for metrics once
 
-    accuracy, precision, recall = calc_metrics_arr(np.argmax(pred, axis=1), labels)
+    classifier_config = yaml.load(open(config['classifier_config']))
+    print(classifier_config)
+
+    dataset = classifier_config['dataset']
+    if dataset == 'CelebA':
+        my_data_loader = CelebALoader(input_size=128)
+    elif dataset == 'shapes':
+        my_data_loader = ShapesLoader()
+    elif dataset == 'CelebA64' or dataset == 'dermatology':
+        my_data_loader = CelebALoader(input_size=64)
+
+    categories, file_names_dict = read_data_file(classifier_config['image_label_dict'])
+
+    image_paths = np.load(classifier_config['train'])
+
+    _images_to_convert, _labels_to_convert = my_data_loader.load_images_and_labels(np.array(image_paths), image_dir=classifier_config['image_dir'], n_class=1,
+                                                        file_names_dict=file_names_dict,
+                                                        num_channel=classifier_config['num_channel'], do_center_crop=True)
+    training_labels = 1 - _labels_to_convert
+    num_samples = len(_images_to_convert)
+
+    if 'w_dim' in config.keys():
+        generation_dim = config['w_dim']
+        converted_dict = test_csvae(config,
+                                    overwrite_test_images=_images_to_convert, overwrite_test_labels=_labels_to_convert)
+    elif 'k_dim' in config.keys():
+        generation_dim = config['k_dim']
+        converted_dict = test_discoverer(config,
+                                         overwrite_test_images=_images_to_convert,
+                                         overwrite_test_labels=_labels_to_convert*(config['num_bins']-1))
+    _ind_num_samples = np.arange(num_samples)
+    _ind_generation_dim = np.random.randint(low=0, high=generation_dim, size=num_samples)
+    _ind_num_class = (training_labels * (config['num_bins']-1)).flatten().astype(int)
+
+    training_images = converted_dict['fake_t_imgs'][_ind_num_samples, _ind_generation_dim, _ind_num_class]
+
+    output_dir = os.path.join(config['log_dir'], config['name'], 'test', 'metrics', 'substitutability')
+
+    tf.reset_default_graph()
+
+    train_classif(config['classifier_config'], overwrite_output_dir=output_dir, overwrite_training_images=training_images,
+                  overwrite_training_labels=training_labels)
+    tf.reset_default_graph()
+    train_names, train_prediction_y, train_true_y, test_names, test_prediction_y, test_true_y = test_classif(classifier_config, output_dir)
+    accuracy, precision, recall = calc_metrics_arr(np.argmax(test_prediction_y, axis=1), test_true_y)
 
     print('Substitutability - accuracy: {:.3f}, precision: {:.3f}, recall: {:.3f}'.format(accuracy, precision, recall))
     metrics_dict = {}
@@ -357,33 +414,38 @@ def calc_substitutability(results_dict):
     return metrics_dict
 
 
-# TODO add stability: how coherent are explanations for similar inputs
+def calc_generalization(results_dict):
+    # This calculates performance of the pretrained classifier on generated images (instead of the original test set)
+    print('Calculating metrics for: Generalization')
+
+    sub_inds = np.logical_or(results_dict['fake_target_ps'] == 0.0, results_dict['fake_target_ps'] == 1.)
+    labels = 1 * (results_dict['fake_target_ps'][sub_inds] > 0.5)
+    pred = results_dict['fake_ps'][sub_inds]
+
+    accuracy, precision, recall = calc_metrics_arr(np.argmax(pred, axis=1), labels)
+
+    print('Generalization - accuracy: {:.3f}, precision: {:.3f}, recall: {:.3f}'.format(accuracy, precision, recall))
+    metrics_dict = {}
+    for metric in ['accuracy', 'precision', 'recall']:
+        metrics_dict.update({'generalization_{}'.format(metric): [eval(metric)]})
+
+    print('Metrics successfully calculated: Generalization')
+    return metrics_dict
+
+
 # https://github.com/GDPlumb/ExpO/blob/fdc80bdd09d02c3345a17365105d2fda804eb40b/Code/ExplanationMetrics.py#L151
 def calc_stability(results_dict, config):
     print('Calculating metrics for: Stability')
     num_randoms = config['metrics_stability_nx']
-    num_imgs = len(results_dict['fake_t_imgs'])
-    num_pixes = config['input_size']*config['input_size']*config['num_channel']
-    NUMS_CLASS_cls = config['num_class']
-    l2_fake_t_img = 0
-    l2_fake_s_recon_img = 0
-    l2_recon_p = 0
-    l2_fake_p = 0
 
-    def _sq_diff(x, y):
-        return np.sum((x-y)**2)
+    def _mean_sq_diff(x, y, rep=num_randoms, ax=1):
+        _x = np.repeat(np.expand_dims(x, axis=ax), rep, axis=ax)
+        return np.mean((_x-y)**2)
 
-    for i in range(num_randoms):
-        sub_inds = np.arange(num_imgs)*num_randoms + i
-        l2_fake_t_img += _sq_diff(results_dict['fake_t_imgs'], results_dict['stability_fake_t_imgs'][sub_inds])
-        l2_fake_s_recon_img += _sq_diff(results_dict['fake_s_recon_imgs'], results_dict['stability_fake_s_recon_imgs'][sub_inds])
-        l2_recon_p += _sq_diff(results_dict['recon_ps'], results_dict['stability_recon_ps'][sub_inds])
-        l2_fake_p += _sq_diff(results_dict['fake_ps'], results_dict['stability_fake_ps'][sub_inds])
-
-    l2_fake_t_img = l2_fake_t_img/(num_randoms*num_imgs*num_pixes)
-    l2_fake_s_recon_img = l2_fake_s_recon_img/(num_randoms*num_imgs*num_pixes)
-    l2_recon_p = l2_recon_p/(num_randoms*num_imgs*NUMS_CLASS_cls)
-    l2_fake_p = l2_fake_p/(num_randoms*num_imgs*NUMS_CLASS_cls)
+    l2_fake_t_img = _mean_sq_diff(results_dict['fake_t_imgs'], results_dict['stability_fake_t_imgs'])
+    l2_fake_s_recon_img = _mean_sq_diff(results_dict['fake_s_recon_imgs'], results_dict['stability_fake_s_recon_imgs'])
+    l2_recon_p = _mean_sq_diff(results_dict['recon_ps'], results_dict['stability_recon_ps'])
+    l2_fake_p = _mean_sq_diff(results_dict['fake_ps'], results_dict['stability_fake_ps'])
 
     print('Stability - l2_fake_t_img: {:.3f}, l2_fake_s_recon_img: {:.3f}, l2_recon_p: {:.3f}, l2_fake_p:{:.3f}'.format(
         l2_fake_t_img, l2_fake_s_recon_img, l2_recon_p, l2_fake_p))
@@ -395,6 +457,9 @@ def calc_stability(results_dict, config):
     return metrics_dict
 
 
+
+
+
 def evaluate(results_dict, config, output_dir=None, export_output=True):
     target_class = config['target_class']
     metrics_dict = {}
@@ -404,8 +469,12 @@ def evaluate(results_dict, config, output_dir=None, export_output=True):
     metrics_dict.update(stability_dict)
 
     # Substitutability
-    substitutability_dict = calc_substitutability(results_dict)
+    substitutability_dict = calc_substitutability(config)
     metrics_dict.update(substitutability_dict)
+
+    # Generalization
+    generalization_dict = calc_generalization(results_dict)
+    metrics_dict.update(generalization_dict)
 
     # influential
     influential_dict = calc_influential(results_dict, target_class)
@@ -415,7 +484,7 @@ def evaluate(results_dict, config, output_dir=None, export_output=True):
     distinct_dict = calc_distinct(results_dict)
     metrics_dict.update(distinct_dict)
 
-    # Realist
+    # Realistic
     realistic_dict = calc_realistic(results_dict, config)
     metrics_dict.update(realistic_dict)
 
@@ -457,14 +526,15 @@ if __name__ == "__main__":
 
     out_dir = os.path.join(config['log_dir'], config['name'], 'test')
 
+
     try:
         results_dict = get_results_from_file(out_dir)
     except:
         print('Results files do not exist. Running test explainer/discoverer/CSVAE to produce results...')
         if 'w_dim' in config.keys():
-            results_dict = test_csvae(args.config)
+            results_dict = test_csvae(config)
         elif 'k_dim' in config.keys():
-            results_dict = test_discoverer(args.config)
+            results_dict = test_discoverer(config)
         else:
             raise Exception('Config file not supported. Either CSVAE type or explainer/discoverer type...')
         pass
