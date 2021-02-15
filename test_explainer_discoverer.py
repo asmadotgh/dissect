@@ -26,7 +26,7 @@ np.random.seed(0)
 
 
 def test(config, dbg_img_label_dict=None, dbg_mode=False, export_output=True, dbg_size=10, dbg_img_indices=[],
-         overwrite_output_dir=None, overwrite_test_images=None, overwrite_test_labels=None):
+         overwrite_output_dir=None, overwrite_test_images=None, overwrite_test_labels=None, calc_stability=True):
 
     # ============= Experiment Folder=============
     assets_dir = os.path.join(config['log_dir'], config['name'])
@@ -284,19 +284,20 @@ def test(config, dbg_img_label_dict=None, dbg_mode=False, export_output=True, db
         end_ind = start_ind + _num_cur_samples
         names[start_ind: end_ind] = np.asarray(image_paths)
 
-        for j in range(metrics_stability_nx):
-            noisy_img = img + np.random.normal(loc=0.0, scale=metrics_stability_var, size=np.shape(img))
-            stability_img_repeat = np.repeat(noisy_img, NUMS_CLASS * generation_dim, 0)
-            stability_feed_dict = my_feed_dict.copy()
-            stability_feed_dict.update({x_source: stability_img_repeat})
-            _stability_fake_t_img, _stability_fake_s_recon_img, _stability_recon_p, _stability_fake_p = sess.run(
-                [fake_target_img, fake_source_recons_img, real_img_recons_cls_prediction, fake_img_cls_prediction],
-                feed_dict=stability_feed_dict)
+        if calc_stability:
+            for j in range(metrics_stability_nx):
+                noisy_img = img + np.random.normal(loc=0.0, scale=metrics_stability_var, size=np.shape(img))
+                stability_img_repeat = np.repeat(noisy_img, NUMS_CLASS * generation_dim, 0)
+                stability_feed_dict = my_feed_dict.copy()
+                stability_feed_dict.update({x_source: stability_img_repeat})
+                _stability_fake_t_img, _stability_fake_s_recon_img, _stability_recon_p, _stability_fake_p = sess.run(
+                    [fake_target_img, fake_source_recons_img, real_img_recons_cls_prediction, fake_img_cls_prediction],
+                    feed_dict=stability_feed_dict)
 
-            stability_fake_t_imgs[start_ind: end_ind, j] = np.reshape(_stability_fake_t_img, (_num_cur_samples, generation_dim, NUMS_CLASS, input_size, input_size, channels))
-            stability_fake_s_recon_imgs[start_ind: end_ind, j] = np.reshape(_stability_fake_s_recon_img, (_num_cur_samples, generation_dim, NUMS_CLASS, input_size, input_size, channels))
-            stability_recon_ps[start_ind: end_ind, j] = np.reshape(_stability_recon_p, (_num_cur_samples, generation_dim, NUMS_CLASS, NUMS_CLASS_cls))
-            stability_fake_ps[start_ind: end_ind, j] = np.reshape(_stability_fake_p, (_num_cur_samples, generation_dim, NUMS_CLASS, NUMS_CLASS_cls))
+                stability_fake_t_imgs[start_ind: end_ind, j] = np.reshape(_stability_fake_t_img, (_num_cur_samples, generation_dim, NUMS_CLASS, input_size, input_size, channels))
+                stability_fake_s_recon_imgs[start_ind: end_ind, j] = np.reshape(_stability_fake_s_recon_img, (_num_cur_samples, generation_dim, NUMS_CLASS, input_size, input_size, channels))
+                stability_recon_ps[start_ind: end_ind, j] = np.reshape(_stability_recon_p, (_num_cur_samples, generation_dim, NUMS_CLASS, NUMS_CLASS_cls))
+                stability_fake_ps[start_ind: end_ind, j] = np.reshape(_stability_fake_p, (_num_cur_samples, generation_dim, NUMS_CLASS, NUMS_CLASS_cls))
 
         real_imgs[start_ind: end_ind] = img
         fake_t_imgs[start_ind: end_ind] = np.reshape(fake_t_img, (_num_cur_samples, generation_dim, NUMS_CLASS, input_size, input_size, channels))
