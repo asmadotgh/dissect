@@ -457,9 +457,6 @@ def calc_stability(results_dict, config):
     return metrics_dict
 
 
-
-
-
 def evaluate(results_dict, config, output_dir=None, export_output=True):
     target_class = config['target_class']
     metrics_dict = {}
