@@ -55,3 +55,4 @@ metrics_epochs: 10
 metrics_test_ratio: 0.25
 metrics_stability_nx: 5
 metrics_stability_var: 0.01
+classifier_config: './configs/celeba64_biased_or_experiments/celebA64_biased_or_Classifier.yaml'
