@@ -19,6 +19,20 @@ class DataLoader:
         raise NotImplementedError
 
 
+class ArrayLoader(DataLoader):
+    def __init__(self, images, labels, input_size=64):
+        DataLoader.__init__(self)
+        self.images = images
+        self.labels = labels
+        self.input_size = input_size
+
+    def load_images_and_labels(self, imgs_names, image_dir, n_class, file_names_dict, num_channel=3,
+                               do_center_crop=False):
+        # img_names is the indices of images/labels to be returned
+        del image_dir, n_class, file_names_dict, num_channel, do_center_crop
+        return self.images[imgs_names], self.labels[imgs_names]
+
+
 class CelebALoader(DataLoader):
     def __init__(self, input_size=128):
         DataLoader.__init__(self)
