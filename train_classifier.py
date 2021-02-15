@@ -16,16 +16,17 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 warnings.filterwarnings("ignore")
 
 
-def train():
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--config', '-c', type=str)
-    args = parser.parse_args()
-    # ============= Load config =============
-    config_path = args.config
+def train(config_path, overwrite_output_dir=None, overwrite_training_images=None, overwrite_training_labels=None):
+    # TODO: get training images instead of indices? change output directory
+    # TODO refactor to use ArrayLoader for loading image arrays instead of from file
     config = yaml.load(open(config_path))
     print(config)
+
     # ============= Experiment Folder=============
-    output_dir = os.path.join(config['log_dir'], config['name'])
+    if overwrite_output_dir is not None: # TODO
+        output_dir = overwrite_output_dir
+    else:
+        output_dir = os.path.join(config['log_dir'], config['name'])
     try:
         os.makedirs(output_dir)
     except:
@@ -35,6 +36,10 @@ def train():
     except:
         pass
     # ============= Experiment Parameters =============
+    if overwrite_training_labels is not None and overwrite_training_images is not None: #TODO
+        OVERWRITE_TRAINING = True
+    else:
+        OVERWRITE_TRAINING = False
     BATCH_SIZE = config['batch_size']
     EPOCHS = config['epochs']
     channels = config['num_channel']
@@ -44,7 +49,7 @@ def train():
     dataset = config['dataset']
     if dataset == 'CelebA':
         pretrained_classifier = celeba_classifier
-        my_data_loader = CelebALoader()
+        my_data_loader = CelebALoader(input_size=128)
     elif dataset == 'shapes':
         pretrained_classifier = shapes_classifier
         my_data_loader = ShapesLoader()
@@ -84,7 +89,7 @@ def train():
         logit, prediction = pretrained_classifier(x_, n_label=N_CLASSES, reuse=False, name='classifier',
                                                   isTrain=isTrain)
         y = y_
-    classif_loss = tf.losses.sigmoid_cross_entropy(multi_class_labels=y, logits=logit)
+    classif_loss = tf.losses.sigmoid_cross_entropy(multi_class_labels=y, logits=logit) # TODO use softmax for binary classification
     classif_acc = calc_accuracy(prediction=prediction, labels=y)
     loss = tf.losses.get_total_loss()
     # ============= Optimization functions =============    
@@ -124,17 +129,29 @@ def train():
     itr_train = 0
     itr_test = 0
     for epoch in range(EPOCHS):
+        # TODO replace overwrite_training_images, overwrite_training_labels
         total_loss = 0.0
-        perm = np.arange(data_train.shape[0])
-        np.random.shuffle(perm)
-        data_train = data_train[perm]
-        num_batch = int(data_train.shape[0] / BATCH_SIZE)
+        if OVERWRITE_TRAINING:
+            perm = np.arange(overwrite_training_images.shape[0])
+            np.random.shuffle(perm)
+            training_images = overwrite_training_images[perm]
+            training_labels = overwrite_training_labels[perm]
+            num_batch = int(overwrite_training_images.shape[0] / BATCH_SIZE)
+        else:
+            perm = np.arange(data_train.shape[0])
+            np.random.shuffle(perm)
+            data_train = data_train[perm]
+            num_batch = int(data_train.shape[0] / BATCH_SIZE)
         for i in range(0, num_batch):
             start = i * BATCH_SIZE
-            ns = data_train[start:start + BATCH_SIZE]
-            xs, ys = my_data_loader.load_images_and_labels(ns, image_dir=config['image_dir'], n_class=N_CLASSES,
-                                                           file_names_dict=file_names_dict,
-                                                           num_channel=channels, do_center_crop=True)
+            if OVERWRITE_TRAINING:
+                xs = training_images[start:start + BATCH_SIZE]
+                ys = training_labels[start:start + BATCH_SIZE]
+            else:
+                ns = data_train[start:start + BATCH_SIZE]
+                xs, ys = my_data_loader.load_images_and_labels(ns, image_dir=config['image_dir'], n_class=N_CLASSES,
+                                                               file_names_dict=file_names_dict,
+                                                               num_channel=channels, do_center_crop=True)
             [_, _loss, summary_str] = sess.run([train_step, loss, sum_train], feed_dict={x_: xs, isTrain: True, y_: ys})
             writer.add_summary(summary_str, itr_train)
             itr_train += 1
@@ -169,4 +186,12 @@ def train():
 
 
 if __name__ == "__main__":
-    train()
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--config', '-c', type=str)
+    args = parser.parse_args()
+
+    # ============= Load config =============
+    config_path = args.config
+
+    train(config_path)
