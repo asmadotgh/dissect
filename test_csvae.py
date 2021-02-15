@@ -30,7 +30,6 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 np.random.seed(0)
 
 
-# TODO if test is called, should use config rather than config_path
 def test(config, dbg_img_label_dict=None, dbg_mode=False, export_output=True, dbg_size=10, dbg_img_indices=[],
          overwrite_output_dir=None, overwrite_test_images=None, overwrite_test_labels=None):
 
@@ -40,13 +39,13 @@ def test(config, dbg_img_label_dict=None, dbg_mode=False, export_output=True, db
     ckpt_dir = os.path.join(assets_dir, 'ckpt_dir')
     sample_dir = os.path.join(assets_dir, 'sample')
 
-    if overwrite_output_dir is not None:  # TODO
+    if overwrite_output_dir is not None:
         test_dir = os.path.join(overwrite_output_dir, 'test')
     else:
         test_dir = os.path.join(assets_dir, 'test')
 
     # ============= Experiment Parameters =============
-    if overwrite_test_labels is not None and overwrite_test_images is not None: #TODO
+    if overwrite_test_labels is not None and overwrite_test_images is not None:
         OVERWRITE_TESTING = True
     else:
         OVERWRITE_TESTING = False
@@ -225,9 +224,6 @@ def test(config, dbg_img_label_dict=None, dbg_mode=False, export_output=True, db
     # ============= Testing =============
     def _save_output_array(name, values):
         np.save(os.path.join(test_dir, '{}.npy'.format(name)), values)
-
-    # TODO: change indexing to avoid bugs? use more dimensions instead of manual calculation
-    # TODO: if working properly, refactor usages of test
 
     names = np.empty([num_samples], dtype=object)
     real_imgs = np.empty([num_samples, input_size, input_size, channels])

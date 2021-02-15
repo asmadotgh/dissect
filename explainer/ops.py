@@ -94,7 +94,6 @@ def spectral_normalization(name, weights, num_iters=1, update_collection=None,
         return w_bar
 
 
-# TODO AG different way of doing this?
 def conditional_batchnorm(x, scope_bn, y=None, nums_class=None):
     # Batch Normalization
     # Ioffe S, Szegedy C. Batch normalization: accelerating deep network training by reducing internal covariate shift[J]. 2015:448-456.

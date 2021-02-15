@@ -51,7 +51,6 @@ def calc_influential(results_dict, target_class):
         metrics_dict.update({'influential_{}'.format(metric): [eval(metric)]})
     print('Metrics successfully calculated: Influential')
 
-    # TODO Faithfulness: Are “relevant” features truly relevant?
     return metrics_dict
 
 
@@ -337,7 +336,7 @@ def calc_realistic(results_dict, config):
     for metric in ['accuracy', 'precision', 'recall']:
         metrics_dict.update({'realistic_{}'.format(metric): [eval(metric)]})
 
-    # TODO: Add FID between real images and explanations?
+    # TODO: Add FID between real images and explanations in the future
 
     print('Metrics successfully calculated: Realistic')
     return metrics_dict
@@ -354,9 +353,9 @@ def calc_substitutability(config):
     tf.reset_default_graph()
     print('Calculating metrics for: Substitutability')
 
-    # TODO
+    # TODO: might get into OOM problems
     # may get into trouble with memory if loading all images instead of reading from file
-    # but can't directly save in test_csvae.py or test_discoverer.py because they use a different subset of images
+    # but can't directly save in test_csvae.py or test_explainer_discoverer.py because they use a different subset of images
     # so change their input and call the function here, might be more efficient to train these classifiers used for metrics once
 
     classifier_config = yaml.load(open(config['classifier_config']))

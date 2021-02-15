@@ -17,13 +17,12 @@ warnings.filterwarnings("ignore")
 
 
 def train(config_path, overwrite_output_dir=None, overwrite_training_images=None, overwrite_training_labels=None):
-    # TODO: get training images instead of indices? change output directory
     # TODO refactor to use ArrayLoader for loading image arrays instead of from file
     config = yaml.load(open(config_path))
     print(config)
 
     # ============= Experiment Folder=============
-    if overwrite_output_dir is not None: # TODO
+    if overwrite_output_dir is not None:
         output_dir = overwrite_output_dir
     else:
         output_dir = os.path.join(config['log_dir'], config['name'])
@@ -36,7 +35,7 @@ def train(config_path, overwrite_output_dir=None, overwrite_training_images=None
     except:
         pass
     # ============= Experiment Parameters =============
-    if overwrite_training_labels is not None and overwrite_training_images is not None: #TODO
+    if overwrite_training_labels is not None and overwrite_training_images is not None:
         OVERWRITE_TRAINING = True
     else:
         OVERWRITE_TRAINING = False
@@ -129,7 +128,6 @@ def train(config_path, overwrite_output_dir=None, overwrite_training_images=None
     itr_train = 0
     itr_test = 0
     for epoch in range(EPOCHS):
-        # TODO replace overwrite_training_images, overwrite_training_labels
         total_loss = 0.0
         if OVERWRITE_TRAINING:
             perm = np.arange(overwrite_training_images.shape[0])

@@ -34,13 +34,13 @@ def test(config, dbg_img_label_dict=None, dbg_mode=False, export_output=True, db
     ckpt_dir = os.path.join(assets_dir, 'ckpt_dir')
     sample_dir = os.path.join(assets_dir, 'sample')
 
-    if overwrite_output_dir is not None:  # TODO
+    if overwrite_output_dir is not None:
         test_dir = os.path.join(overwrite_output_dir, 'test')
     else:
         test_dir = os.path.join(assets_dir, 'test')
 
     # ============= Experiment Parameters =============
-    if overwrite_test_labels is not None and overwrite_test_images is not None: #TODO
+    if overwrite_test_labels is not None and overwrite_test_images is not None:
         OVERWRITE_TESTING = True
     else:
         OVERWRITE_TESTING = False
@@ -211,9 +211,6 @@ def test(config, dbg_img_label_dict=None, dbg_mode=False, export_output=True, db
     def _save_output_array(name, values):
         np.save(os.path.join(test_dir, '{}.npy'.format(name)), values)
 
-    # TODO: change indexing to avoid bugs? use more dimensions instead of manual calculation
-    # TODO: if working properly, refactor usages of test
-
     names = np.empty([num_samples], dtype=object)
     real_imgs = np.empty([num_samples, input_size, input_size, channels])
     fake_t_imgs = np.empty([num_samples, generation_dim, NUMS_CLASS, input_size, input_size, channels])
@@ -290,7 +287,6 @@ def test(config, dbg_img_label_dict=None, dbg_mode=False, export_output=True, db
         for j in range(metrics_stability_nx):
             noisy_img = img + np.random.normal(loc=0.0, scale=metrics_stability_var, size=np.shape(img))
             stability_img_repeat = np.repeat(noisy_img, NUMS_CLASS * generation_dim, 0)
-            # TODO is copying feed dict working?
             stability_feed_dict = my_feed_dict.copy()
             stability_feed_dict.update({x_source: stability_img_repeat})
             _stability_fake_t_img, _stability_fake_s_recon_img, _stability_recon_p, _stability_fake_p = sess.run(
