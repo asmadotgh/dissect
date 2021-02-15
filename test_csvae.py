@@ -4,7 +4,7 @@ import os
 
 from classifier.DenseNet import pretrained_classifier as celeba_classifier
 from classifier.SimpleNet import pretrained_classifier as shapes_classifier
-from data_loader.data_loader import CelebALoader, ShapesLoader
+from data_loader.data_loader import CelebALoader, ShapesLoader, ArrayLoader
 
 from explainer.networks_128 import EncoderZ as EncoderZ_128
 from explainer.networks_128 import EncoderW as EncoderW_128
@@ -30,20 +30,27 @@ warnings.filterwarnings("ignore", category=DeprecationWarning)
 np.random.seed(0)
 
 
-def test(config_path, dbg_img_label_dict=None, dbg_mode=False, export_output=True, dbg_size=10, dbg_img_indices=[]):
-    # ============= Load config =============
-
-    config = yaml.load(open(config_path))
-    print(config)
+# TODO if test is called, should use config rather than config_path
+def test(config, dbg_img_label_dict=None, dbg_mode=False, export_output=True, dbg_size=10, dbg_img_indices=[],
+         overwrite_output_dir=None, overwrite_test_images=None, overwrite_test_labels=None):
 
     # ============= Experiment Folder=============
     assets_dir = os.path.join(config['log_dir'], config['name'])
     log_dir = os.path.join(assets_dir, 'log')
     ckpt_dir = os.path.join(assets_dir, 'ckpt_dir')
     sample_dir = os.path.join(assets_dir, 'sample')
-    test_dir = os.path.join(assets_dir, 'test')
+
+    if overwrite_output_dir is not None:  # TODO
+        test_dir = os.path.join(overwrite_output_dir, 'test')
+    else:
+        test_dir = os.path.join(assets_dir, 'test')
 
     # ============= Experiment Parameters =============
+    if overwrite_test_labels is not None and overwrite_test_images is not None: #TODO
+        OVERWRITE_TESTING = True
+    else:
+        OVERWRITE_TESTING = False
+
     ckpt_dir_cls = config['cls_experiment']
     if 'evaluation_batch_size' in config.keys():
         BATCH_SIZE = config['evaluation_batch_size']
@@ -77,40 +84,51 @@ def test(config_path, dbg_img_label_dict=None, dbg_mode=False, export_output=Tru
     z_dim = config['z_dim']
     w_dim = config['w_dim']
 
-    if dbg_mode:
+    if OVERWRITE_TESTING:
+        num_samples = len(overwrite_test_labels)
+    elif dbg_mode:
         num_samples = dbg_size
     else:
         num_samples = config['count_to_save']
 
     dataset = config['dataset']
+
     if dataset == 'CelebA':
+        if OVERWRITE_TESTING:
+            my_data_loader = ArrayLoader(overwrite_test_images, overwrite_test_labels, input_size=128)
+        else:
+            my_data_loader = CelebALoader(input_size=128)
         pretrained_classifier = celeba_classifier
-        my_data_loader = CelebALoader()
         EncoderZ = EncoderZ_128
         EncoderW = EncoderW_128
         DecoderX = DecoderX_128
         DecoderY = DecoderY_128
     elif dataset == 'shapes':
-        pretrained_classifier = shapes_classifier
-        if dbg_mode:
-            my_data_loader = ShapesLoader(dbg_mode=True, dbg_size=dbg_size,
-                                          dbg_image_label_dict=image_label_dict,
-                                          dbg_img_indices=dbg_img_indices)
+        if OVERWRITE_TESTING:
+            my_data_loader = ArrayLoader(overwrite_test_images, overwrite_test_labels, input_size=64)
         else:
-            # my_data_loader = ShapesLoader()
-            # for efficiency, let's just load as many samples as we need
-            my_data_loader = ShapesLoader(dbg_mode=True, dbg_size=num_samples,
-                                          dbg_image_label_dict=image_label_dict,
-                                          dbg_img_indices=dbg_img_indices)
-            dbg_mode = True
-
+            if dbg_mode:
+                my_data_loader = ShapesLoader(dbg_mode=True, dbg_size=dbg_size,
+                                              dbg_image_label_dict=image_label_dict,
+                                              dbg_img_indices=dbg_img_indices)
+            else:
+                # my_data_loader = ShapesLoader()
+                # for efficiency, let's just load as many samples as we need
+                my_data_loader = ShapesLoader(dbg_mode=True, dbg_size=num_samples,
+                                              dbg_image_label_dict=image_label_dict,
+                                              dbg_img_indices=dbg_img_indices)
+                dbg_mode = True
+        pretrained_classifier = shapes_classifier
         EncoderZ = EncoderZ_64
         EncoderW = EncoderW_64
         DecoderX = DecoderX_64
         DecoderY = DecoderY_64
     elif dataset == 'CelebA64' or dataset == 'dermatology':
+        if OVERWRITE_TESTING:
+            my_data_loader = ArrayLoader(overwrite_test_images, overwrite_test_labels, input_size=64)
+        else:
+            my_data_loader = CelebALoader(input_size=64)
         pretrained_classifier = celeba_classifier
-        my_data_loader = CelebALoader(input_size=64)
         EncoderZ = EncoderZ_64
         EncoderW = EncoderW_64
         DecoderX = DecoderX_64
@@ -122,7 +140,9 @@ def test(config_path, dbg_img_label_dict=None, dbg_mode=False, export_output=Tru
     except:
         print("Problem in reading input data file : ", image_label_dict)
         sys.exit()
-    if dbg_mode and dataset == 'shapes':
+    if OVERWRITE_TESTING:
+        data = np.arange(len(overwrite_test_labels))
+    elif dbg_mode and dataset == 'shapes':
         data = np.array([str(ind) for ind in my_data_loader.tmp_list])
     else:
         if len(dbg_img_indices) > 0:
@@ -131,7 +151,7 @@ def test(config_path, dbg_img_label_dict=None, dbg_mode=False, export_output=Tru
             data = np.asarray(list(file_names_dict.keys()))
     print("The classification categories are: ")
     print(categories)
-    print('The size of the training set: ', data.shape[0])
+    print('The size of the test set: ', data.shape[0])
 
     # ============= placeholder =============
     x_source = tf.placeholder(tf.float32, [None, input_size, input_size, channels], name='x_source')
@@ -206,28 +226,31 @@ def test(config_path, dbg_img_label_dict=None, dbg_mode=False, export_output=Tru
     def _save_output_array(name, values):
         np.save(os.path.join(test_dir, '{}.npy'.format(name)), values)
 
+    # TODO: change indexing to avoid bugs? use more dimensions instead of manual calculation
+    # TODO: if working properly, refactor usages of test
+
     names = np.empty([num_samples], dtype=object)
     real_imgs = np.empty([num_samples, input_size, input_size, channels])
-    fake_t_imgs = np.empty([num_samples * generation_dim * NUMS_CLASS, input_size, input_size, channels])
-    fake_s_recon_imgs = np.empty([num_samples * generation_dim * NUMS_CLASS, input_size, input_size, channels])
-    real_ps = np.empty([num_samples * generation_dim * NUMS_CLASS, NUMS_CLASS_cls])
-    recon_ps = np.empty([num_samples * generation_dim * NUMS_CLASS, NUMS_CLASS_cls])
-    fake_target_ps = np.empty([num_samples * generation_dim * NUMS_CLASS])
-    fake_ps = np.empty([num_samples * generation_dim * NUMS_CLASS, NUMS_CLASS_cls])
+    fake_t_imgs = np.empty([num_samples, generation_dim, NUMS_CLASS, input_size, input_size, channels])
+    fake_s_recon_imgs = np.empty([num_samples, generation_dim, NUMS_CLASS, input_size, input_size, channels])
+    real_ps = np.empty([num_samples, generation_dim, NUMS_CLASS, NUMS_CLASS_cls])
+    recon_ps = np.empty([num_samples, generation_dim, NUMS_CLASS, NUMS_CLASS_cls])
+    fake_target_ps = np.empty([num_samples, generation_dim, NUMS_CLASS])
+    fake_ps = np.empty([num_samples, generation_dim, NUMS_CLASS, NUMS_CLASS_cls])
 
     # For stability metric
-    stability_fake_t_imgs = np.empty([num_samples * generation_dim * NUMS_CLASS*metrics_stability_nx, input_size, input_size, channels])
-    stability_fake_s_recon_imgs = np.empty([num_samples * generation_dim * NUMS_CLASS*metrics_stability_nx, input_size, input_size, channels])
-    stability_recon_ps = np.empty([num_samples * generation_dim * NUMS_CLASS*metrics_stability_nx, NUMS_CLASS_cls])
-    stability_fake_ps = np.empty([num_samples * generation_dim * NUMS_CLASS*metrics_stability_nx, NUMS_CLASS_cls])
+    stability_fake_t_imgs = np.empty([num_samples, metrics_stability_nx, generation_dim, NUMS_CLASS, input_size, input_size, channels])
+    stability_fake_s_recon_imgs = np.empty([num_samples, metrics_stability_nx, generation_dim, NUMS_CLASS, input_size, input_size, channels])
+    stability_recon_ps = np.empty([num_samples, metrics_stability_nx, generation_dim, NUMS_CLASS, NUMS_CLASS_cls])
+    stability_fake_ps = np.empty([num_samples, metrics_stability_nx, generation_dim, NUMS_CLASS, NUMS_CLASS_cls])
 
     # TODO: can later save embeddings if needed
-    # fake_t_embeds_z = np.empty([num_samples * generation_dim * NUMS_CLASS] + z_dim)
-    # fake_t_embeds_w = np.empty([num_samples * generation_dim * NUMS_CLASS] + w_dim)
-    # fake_s_embeds_z = np.empty([num_samples * generation_dim * NUMS_CLASS] + z_dim)
-    # fake_s_embeds_w = np.empty([num_samples * generation_dim * NUMS_CLASS] + w_dim)
-    # s_embeds_z = np.empty([num_samples * generation_dim * NUMS_CLASS] + z_dim)
-    # s_embeds_w = np.empty([num_samples * generation_dim * NUMS_CLASS] + w_dim)
+    # fake_t_embeds_z = np.empty([num_samples, generation_dim, NUMS_CLASS, z_dim])
+    # fake_t_embeds_w = np.empty([num_samples, generation_dim, NUMS_CLASS, w_dim])
+    # fake_s_embeds_z = np.empty([num_samples, generation_dim, NUMS_CLASS, z_dim])
+    # fake_s_embeds_w = np.empty([num_samples, generation_dim, NUMS_CLASS, w_dim])
+    # s_embeds_z = np.empty([num_samples, generation_dim, NUMS_CLASS, z_dim])
+    # s_embeds_w = np.empty([num_samples, generation_dim, NUMS_CLASS, w_dim])
 
     arrs_to_save = [
         'names', 'real_imgs', 'fake_t_imgs', 'fake_s_recon_imgs',
@@ -268,18 +291,9 @@ def test(config_path, dbg_img_label_dict=None, dbg_mode=False, export_output=Tru
         _num_cur_samples = min(data.shape[0] - i * BATCH_SIZE, BATCH_SIZE)
         start_ind = i * BATCH_SIZE
         end_ind = start_ind + _num_cur_samples
-        multiplier = generation_dim * NUMS_CLASS
-        metric_multiplier = generation_dim * NUMS_CLASS * metrics_stability_nx
         names[start_ind: end_ind] = np.asarray(image_paths)
 
-        stability_fake_t_img = np.empty([_num_cur_samples*generation_dim * NUMS_CLASS*metrics_stability_nx, input_size, input_size, channels])
-        stability_fake_s_recon_img = np.empty([_num_cur_samples*generation_dim * NUMS_CLASS*metrics_stability_nx, input_size, input_size, channels])
-        stability_recon_p = np.empty([_num_cur_samples*generation_dim * NUMS_CLASS*metrics_stability_nx, NUMS_CLASS_cls])
-        stability_fake_p = np.empty([_num_cur_samples*generation_dim * NUMS_CLASS*metrics_stability_nx, NUMS_CLASS_cls])
-
         for j in range(metrics_stability_nx):
-            _start_ind = j * _num_cur_samples * multiplier
-            _end_ind = (j+1) * _num_cur_samples * multiplier
             noisy_img = img + np.random.normal(loc=0.0, scale=metrics_stability_var, size=np.shape(img))
             stability_img_repeat = np.repeat(noisy_img, NUMS_CLASS * generation_dim, 0)
             stability_feed_dict = {y_target: target_labels, x_source: stability_img_repeat, train_phase: False,
@@ -287,32 +301,27 @@ def test(config_path, dbg_img_label_dict=None, dbg_mode=False, export_output=Tru
             _stability_fake_t_img, _stability_fake_s_recon_img, _stability_recon_p, _stability_fake_p = sess.run(
                 [fake_target_img, pred_x, fake_recon_cls_prediction, fake_img_cls_prediction],
                 feed_dict=stability_feed_dict)
-            # TODO could improve speed by doing it in one step: problem with sizes
-            stability_fake_t_img[_start_ind: _end_ind] = _stability_fake_t_img
-            stability_fake_s_recon_img[_start_ind: _end_ind] = _stability_fake_s_recon_img
-            stability_recon_p[_start_ind: _end_ind] = _stability_recon_p
-            stability_fake_p[_start_ind: _end_ind] = _stability_fake_p
 
-        stability_fake_t_imgs[start_ind * metric_multiplier: end_ind * metric_multiplier] = stability_fake_t_img
-        stability_fake_s_recon_imgs[start_ind * metric_multiplier: end_ind * metric_multiplier] = stability_fake_s_recon_img
-        stability_recon_ps[start_ind * metric_multiplier: end_ind * metric_multiplier] = stability_recon_p
-        stability_fake_ps[start_ind * metric_multiplier: end_ind * metric_multiplier] = stability_fake_p
+            stability_fake_t_imgs[start_ind: end_ind, j] = np.reshape(_stability_fake_t_img, (_num_cur_samples, generation_dim, NUMS_CLASS, input_size, input_size, channels))
+            stability_fake_s_recon_imgs[start_ind: end_ind, j] = np.reshape(_stability_fake_s_recon_img,  (_num_cur_samples, generation_dim, NUMS_CLASS, input_size, input_size, channels))
+            stability_recon_ps[start_ind: end_ind, j] = np.reshape(_stability_recon_p, (_num_cur_samples, generation_dim, NUMS_CLASS, NUMS_CLASS_cls))
+            stability_fake_ps[start_ind: end_ind, j] = np.reshape(_stability_fake_p, (_num_cur_samples, generation_dim, NUMS_CLASS, NUMS_CLASS_cls))
 
         real_imgs[start_ind: end_ind] = img
-        fake_t_imgs[start_ind * multiplier: end_ind * multiplier] = fake_t_img
-        fake_s_recon_imgs[start_ind * multiplier: end_ind * multiplier] = fake_s_recon_img
-        real_ps[start_ind * multiplier: end_ind * multiplier] = real_p
-        recon_ps[start_ind * multiplier: end_ind * multiplier] = recon_p
-        fake_target_ps[start_ind * multiplier: end_ind * multiplier] = fake_target_p
-        fake_ps[start_ind * multiplier: end_ind * multiplier] = fake_p
+        fake_t_imgs[start_ind: end_ind] = np.reshape(fake_t_img, (_num_cur_samples, generation_dim, NUMS_CLASS, input_size, input_size, channels))
+        fake_s_recon_imgs[start_ind: end_ind] = np.reshape(fake_s_recon_img, (_num_cur_samples, generation_dim, NUMS_CLASS, input_size, input_size, channels))
+        real_ps[start_ind: end_ind] = np.reshape(real_p, (_num_cur_samples, generation_dim, NUMS_CLASS, NUMS_CLASS_cls))
+        recon_ps[start_ind: end_ind] = np.reshape(recon_p, (_num_cur_samples, generation_dim, NUMS_CLASS, NUMS_CLASS_cls))
+        fake_target_ps[start_ind: end_ind] = np.reshape(fake_target_p, (_num_cur_samples, generation_dim, NUMS_CLASS))
+        fake_ps[start_ind: end_ind] = np.reshape(fake_p, (_num_cur_samples, generation_dim, NUMS_CLASS, NUMS_CLASS_cls))
 
         # TODO: can later save embeddings if needed
-        # fake_t_embeds_z[start_ind * multiplier: end_ind * multiplier] = fake_t_embeds_z
-        # fake_t_embeds_w[start_ind * multiplier: end_ind * multiplier] = fake_t_embeds_w
-        # fake_s_embeds_z[start_ind * multiplier: end_ind * multiplier] = fake_s_embeds_z
-        # fake_s_embeds_w[start_ind * multiplier: end_ind * multiplier] = fake_s_embeds_w
-        # s_embeds_z[start_ind * multiplier: end_ind * multiplier] = s_embeds_z
-        # s_embeds_w[start_ind * multiplier: end_ind * multiplier] = s_embeds_w
+        # fake_t_embeds_z[start_ind: end_ind] = np.reshape(fake_t_embeds_z, (_num_cur_samples, generation_dim, NUMS_CLASS, z_dim))
+        # fake_t_embeds_w[start_ind: end_ind] = np.reshape(fake_t_embeds_w, (_num_cur_samples, generation_dim, NUMS_CLASS, w_dim))
+        # fake_s_embeds_z[start_ind: end_ind] = np.reshape(fake_s_embeds_z, (_num_cur_samples, generation_dim, NUMS_CLASS, z_dim))
+        # fake_s_embeds_w[start_ind: end_ind] = np.reshape(fake_s_embeds_w, (_num_cur_samples, generation_dim, NUMS_CLASS, w_dim))
+        # s_embeds_z[start_ind: end_ind] = np.reshape(s_embeds_z, (_num_cur_samples, generation_dim, NUMS_CLASS, z_dim))
+        # s_embeds_w[start_ind : end_ind] = np.reshape(s_embeds_w, (_num_cur_samples, generation_dim, NUMS_CLASS, w_dim))
 
         print('{} / {}'.format(i + 1, math.ceil(data.shape[0] / BATCH_SIZE)))
 
@@ -332,4 +341,9 @@ if __name__ == "__main__":
     parser.add_argument('--config', '-c', type=str)
     args = parser.parse_args()
 
-    test(args.config)
+    # ============= Load config =============
+
+    config = yaml.load(open(args.config))
+    print(config)
+
+    test(config)
