@@ -81,6 +81,7 @@ def train():
     lambda_cyc = config['lambda_cyc']
     lambda_cls = config['lambda_cls']
     save_summary = int(config['save_summary'])
+    save_ckpt = int(config['save_ckpt'])
     ckpt_dir_continue = config['ckpt_dir_continue']
     k_dim = config['k_dim']
     lambda_r = config['lambda_r']
@@ -116,6 +117,8 @@ def train():
     else:
         ckpt_dir_continue = os.path.join(ckpt_dir_continue, 'ckpt_dir')
         continue_train = True
+
+    global_step = tf.Variable(0, dtype=tf.int32, trainable=False, name='global_step')
 
     # ============= Data =============
     try:
@@ -201,7 +204,7 @@ def train():
     G_loss_cyc = l1_loss(x_source, fake_source_img)
     G_loss_rec = l1_loss(x_source, fake_source_recons_img)  #+l2_loss(x_source_img_embedding, fake_source_img_embedding)
     D_loss = (D_loss_GAN * lambda_GAN)
-    D_opt = tf.train.AdamOptimizer(2e-4, beta1=0., beta2=0.9).minimize(D_loss, var_list=D.var_list())
+    D_opt = tf.train.AdamOptimizer(2e-4, beta1=0., beta2=0.9).minimize(D_loss, var_list=D.var_list(), global_step=global_step)
 
     if disentangle:
         R_fake_target_v_source_loss, R_fake_target_v_source_acc = contrastive_regularizer_loss(
@@ -213,14 +216,14 @@ def train():
         R_fake_source_recon_v_source_loss, R_fake_source_recon_v_source_acc = contrastive_regularizer_loss(
             regularizer_fake_source_recon_v_source_logits, y_r_0)
         R_loss = R_fake_target_v_source_loss + R_fake_source_v_target_loss + R_fake_source_v_source_loss + R_fake_source_recon_v_source_loss
-        R_opt = tf.train.AdamOptimizer(2e-4, beta1=0., beta2=0.9).minimize(R_loss * lambda_r, var_list=R.var_list())
+        R_opt = tf.train.AdamOptimizer(2e-4, beta1=0., beta2=0.9).minimize(R_loss * lambda_r, var_list=R.var_list(), global_step=global_step)
         G_loss = (G_loss_GAN * lambda_GAN) + (G_loss_rec * lambda_cyc) + (G_loss_cyc * lambda_cyc) + (
                 fake_evaluation * lambda_cls) + (recons_evaluation * lambda_cls) + (R_loss * lambda_r)
-        G_opt = tf.train.AdamOptimizer(2e-4, beta1=0., beta2=0.9).minimize(G_loss, var_list=G.var_list() + R.var_list())
+        G_opt = tf.train.AdamOptimizer(2e-4, beta1=0., beta2=0.9).minimize(G_loss, var_list=G.var_list() + R.var_list(), global_step=global_step)
     else:
         G_loss = (G_loss_GAN * lambda_GAN) + (G_loss_rec * lambda_cyc) + (G_loss_cyc * lambda_cyc) + (
                 fake_evaluation * lambda_cls) + (recons_evaluation * lambda_cls)
-        G_opt = tf.train.AdamOptimizer(2e-4, beta1=0., beta2=0.9).minimize(G_loss, var_list=G.var_list())
+        G_opt = tf.train.AdamOptimizer(2e-4, beta1=0., beta2=0.9).minimize(G_loss, var_list=G.var_list(), global_step=global_step)
 
     # ============= summary =============
     real_img_sum = tf.summary.image('real_img', x_source)
@@ -296,8 +299,7 @@ def train():
     print(ckpt_dir_cls, ckpt_name)
 
     # ============= Training =============
-    counter = 1
-    for e in range(1, EPOCHS + 1):
+    for e in range(EPOCHS):
         np.random.shuffle(data)
         for i in range(data.shape[0] // BATCH_SIZE):
             if args.debug:
@@ -329,21 +331,19 @@ def train():
 
             if (i + 1) % discriminate_evert_nth == 0:
 
-                _, d_loss, summary_str = sess.run([D_opt, D_loss, d_sum],
+                _, d_loss, summary_str, counter = sess.run([D_opt, D_loss, d_sum, global_step],
                                                   feed_dict=my_feed_dict)
                 writer.add_summary(summary_str, counter)
 
             if (i + 1) % generate_every_nth == 0:
                 if disentangle:
-                    _, g_loss, g_summary_str, r_loss, r_summary_str = sess.run([G_opt, G_loss, g_sum, R_loss, r_sum],
+                    _, g_loss, g_summary_str, r_loss, r_summary_str, counter = sess.run([G_opt, G_loss, g_sum, R_loss, r_sum, global_step],
                                                                                feed_dict=my_feed_dict)
                     # _, r_loss, r_summary_str = sess.run([R_opt, R_loss, r_sum], feed_dict=my_feed_dict)
                     writer.add_summary(r_summary_str, counter)
                 else:
-                    _, g_loss, g_summary_str = sess.run([G_opt, G_loss, g_sum], feed_dict=my_feed_dict)
+                    _, g_loss, g_summary_str, counter = sess.run([G_opt, G_loss, g_sum, global_step], feed_dict=my_feed_dict)
                 writer.add_summary(g_summary_str, counter)
-
-            counter += 1
 
             def save_results(sess, step):
                 num_seed_imgs = 8
@@ -386,12 +386,12 @@ def train():
                             nums_class=NUMS_CLASS, k_dim=k_dim, image_size=input_size, num_channel=channels)
                 np.save(sample_file.split('.jpg')[0] + '_y.npy', labels)
 
-            if counter % save_summary == 0:
-                save_results(sess, counter)
-                # print(counter, i, e, g_loss, d_loss)
+            _approx_num_seen_batches = int(counter/3)
+            if _approx_num_seen_batches % save_summary == 0:
+                save_results(sess, _approx_num_seen_batches)
 
-            if counter % 500 == 0:
-                saver.save(sess, ckpt_dir + "/model%2d.ckpt" % counter)
+            if _approx_num_seen_batches % save_ckpt == 0:
+                saver.save(sess, ckpt_dir + "/model%2d.ckpt" % _approx_num_seen_batches, global_step=global_step)
 
 
 if __name__ == "__main__":
