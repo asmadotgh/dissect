@@ -33,6 +33,8 @@ generate_every_nth: 5
 
 save_summary: 20
 # Save sample images after every how many iterations.
+save_ckpt: 500
+# Save checkpoint after every how many iterations.
 
 ckpt_dir_continue: './output/discoverer/celeba_biased_experiments/celeba_biased_Explainer'
 

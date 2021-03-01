@@ -47,6 +47,8 @@ w_dim: 2
 
 save_summary: 20
 # Save sample images after every how many iterations.
+save_ckpt: 500
+# Save checkpoint after every how many iterations.
 
 ckpt_dir_continue: './output/csvae_experiments/shapes_redcyan_csvae_multidim'
 
