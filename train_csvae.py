@@ -94,6 +94,7 @@ def train():
     w_dim = config['w_dim']
 
     save_summary = int(config['save_summary'])
+    save_ckpt = int(config['save_ckpt'])
     ckpt_dir_continue = config['ckpt_dir_continue']
 
     dataset = config['dataset']
@@ -130,6 +131,8 @@ def train():
     else:
         ckpt_dir_continue = os.path.join(ckpt_dir_continue, 'ckpt_dir')
         continue_train = True
+
+    global_step = tf.Variable(0, dtype=tf.int32, trainable=False, name='global_step')
 
     # ============= Data =============
     try:
@@ -253,8 +256,10 @@ def train():
 
     optimizer_1 = tf.train.AdamOptimizer(2e-4, beta1=0., beta2=0.9).minimize(loss1, var_list=decoder_x.var_list() +
                                                                                              encoder_w.var_list() +
-                                                                                             encoder_z.var_list())
-    optimizer_2 = tf.train.AdamOptimizer(2e-4, beta1=0., beta2=0.9).minimize(loss2, var_list=decoder_y.var_list())
+                                                                                             encoder_z.var_list(),
+                                                                             global_step=global_step)
+    optimizer_2 = tf.train.AdamOptimizer(2e-4, beta1=0., beta2=0.9).minimize(loss2, var_list=decoder_y.var_list(),
+                                                                             global_step=global_step)
 
     # combine losses for tracking
     loss = loss1 + loss2
@@ -315,7 +320,6 @@ def train():
     print(ckpt_dir_cls, ckpt_name)
 
     # ============= Training =============
-    counter = 1
     for e in range(1, EPOCHS + 1):
         np.random.shuffle(data)
         for i in range(data.shape[0] // BATCH_SIZE):
@@ -336,18 +340,16 @@ def train():
 
             my_feed_dict = {y_target: target_labels, x_source: img, train_phase: True, y_s: labels}
 
-            _, par1_loss, par1_summary_str, overall_sum_str = sess.run([optimizer_1, loss1, part1_sum, overall_sum],
+            _, par1_loss, par1_summary_str, overall_sum_str, counter = sess.run([optimizer_1, loss1, part1_sum, overall_sum, global_step],
                                                                        feed_dict=my_feed_dict)
 
-            writer.add_summary(par1_summary_str, counter)
-            writer.add_summary(overall_sum_str, counter)
-            counter += 1
+            writer.add_summary(par1_summary_str, global_step=counter)
+            writer.add_summary(overall_sum_str, global_step=counter)
 
-            _, part2_loss, part2_summary_str, overall_sum_str2 = sess.run([optimizer_2, loss2, part2_sum, overall_sum],
+            _, part2_loss, part2_summary_str, overall_sum_str2, counter = sess.run([optimizer_2, loss2, part2_sum, overall_sum, global_step],
                                                                           feed_dict=my_feed_dict)
-            writer.add_summary(part2_summary_str, counter)
-            writer.add_summary(overall_sum_str2, counter)
-            counter += 1
+            writer.add_summary(part2_summary_str, global_step=counter)
+            writer.add_summary(overall_sum_str2, global_step=counter)
 
             def save_results(sess, step):
                 num_seed_imgs = BATCH_SIZE
@@ -381,8 +383,8 @@ def train():
             if batch_counter % save_summary == 0:
                 save_results(sess, batch_counter)
 
-            if batch_counter % 500 == 0:
-                saver.save(sess, ckpt_dir + "/model%2d.ckpt" % batch_counter)
+            if batch_counter % save_ckpt == 0:
+                saver.save(sess, ckpt_dir + "/model%2d.ckpt" % batch_counter, global_step=global_step)
 
 
 if __name__ == "__main__":
