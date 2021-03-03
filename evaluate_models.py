@@ -14,8 +14,7 @@ from utils import calc_metrics_arr, calc_accuracy, safe_append
 from sklearn.metrics import mean_squared_error
 import math
 from test_classifier import test as test_classif
-from utils import read_data_file
-from data_loader.data_loader import ImageLabelLoader, ShapesLoader
+from test_classifier import get_prediction_from_file
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 np.random.seed(0)
@@ -354,15 +353,21 @@ def calc_substitutability(config):
     tf.reset_default_graph()
 
     classifier_config = yaml.load(open(config['classifier_config']))
+    _, _, _, _, orig_test_prediction_y, orig_test_true_y = get_prediction_from_file(
+        classifier_config)
+    orig_accuracy, orig_precision, orig_recall = calc_metrics_arr(
+        np.argmax(orig_test_prediction_y, axis=1), orig_test_true_y)
+
     _edited_cls_config = yaml.load(open(config['substitutability_classifier_config']))
     classifier_config['log_dir'] = _edited_cls_config['log_dir']
-    train_names, train_prediction_y, train_true_y, test_names, test_prediction_y, test_true_y = test_classif(
+    _, _, _, _, test_prediction_y, test_true_y = test_classif(
         classifier_config)
     accuracy, precision, recall = calc_metrics_arr(np.argmax(test_prediction_y, axis=1), test_true_y)
 
-    print('Substitutability - accuracy: {:.3f}, precision: {:.3f}, recall: {:.3f}'.format(accuracy, precision, recall))
+    print('Substitutability - accuracy: {:.3f}, precision: {:.3f}, recall: {:.3f}, original accuracy: {:.3f}, original precision: {:.3f}, original recall: {:.3f}'.format(
+        accuracy, precision, recall, orig_accuracy, orig_precision, orig_recall))
     metrics_dict = {}
-    for metric in ['accuracy', 'precision', 'recall']:
+    for metric in ['accuracy', 'precision', 'recall', 'orig_accuracy', 'orig_precision', 'orig_recall']:
         metrics_dict.update({'substitutability_{}'.format(metric): [eval(metric)]})
 
     print('Metrics successfully calculated: Substitutability')
