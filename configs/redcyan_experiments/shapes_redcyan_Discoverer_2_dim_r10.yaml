@@ -52,5 +52,5 @@ classifier_config: './configs/redcyan_experiments/shapes_redcyan_Classifier.yaml
 # hyperparameters for saving results for substitutability metric
 calc_substitutability: False
 
-substitutability_attr: 'Smiling'
+substitutability_attr: 'redcyan'
 substitutability_classifier_config: './output/discoverer/redcyan_experiments/shapes_redcyan_Discoverer_2_dim_r10/shapes_redcyan_Classifier_substitutability.yaml'
