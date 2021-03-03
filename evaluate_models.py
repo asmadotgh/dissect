@@ -13,10 +13,9 @@ import tensorflow as tf
 from utils import calc_metrics_arr, calc_accuracy, safe_append
 from sklearn.metrics import mean_squared_error
 import math
-from train_classifier import train as train_classif
 from test_classifier import test as test_classif
 from utils import read_data_file
-from data_loader.data_loader import CelebALoader, ShapesLoader
+from data_loader.data_loader import ImageLabelLoader, ShapesLoader
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 np.random.seed(0)
@@ -350,58 +349,15 @@ def calc_substitutability(config):
     # R%−substitutable if our classifier can be retrained using Dtrans to achieve performance that is R% of S.
     # For example, if our original dataset and classifier yield 90% performance, and we substitute a generated dataset for
     # our original dataset and a re-trained classifier yields 45%, we would say the new dataset is 50% substitutable.
-    tf.reset_default_graph()
     print('Calculating metrics for: Substitutability')
 
-    # TODO: might get into OOM problems
-    # may get into trouble with memory if loading all images instead of reading from file
-    # but can't directly save in test_csvae.py or test_explainer_discoverer.py because they use a different subset of images
-    # so change their input and call the function here, might be more efficient to train these classifiers used for metrics once
+    tf.reset_default_graph()
 
     classifier_config = yaml.load(open(config['classifier_config']))
-    print(classifier_config)
-
-    dataset = classifier_config['dataset']
-    if dataset == 'CelebA':
-        my_data_loader = CelebALoader(input_size=128)
-    elif dataset == 'shapes':
-        my_data_loader = ShapesLoader()
-    elif dataset == 'CelebA64' or dataset == 'dermatology':
-        my_data_loader = CelebALoader(input_size=64)
-
-    categories, file_names_dict = read_data_file(classifier_config['image_label_dict'])
-
-    image_paths = np.load(classifier_config['train'])
-
-    _images_to_convert, _labels_to_convert = my_data_loader.load_images_and_labels(np.array(image_paths), image_dir=classifier_config['image_dir'], n_class=1,
-                                                        file_names_dict=file_names_dict,
-                                                        num_channel=classifier_config['num_channel'], do_center_crop=True)
-    training_labels = 1 - _labels_to_convert
-    num_samples = len(_images_to_convert)
-
-    if 'w_dim' in config.keys():
-        generation_dim = config['w_dim']
-        converted_dict = test_csvae(config,
-                                    overwrite_test_images=_images_to_convert, overwrite_test_labels=_labels_to_convert)
-    elif 'k_dim' in config.keys():
-        generation_dim = config['k_dim']
-        converted_dict = test_discoverer(config,
-                                         overwrite_test_images=_images_to_convert,
-                                         overwrite_test_labels=_labels_to_convert*(config['num_bins']-1))
-    _ind_num_samples = np.arange(num_samples)
-    _ind_generation_dim = np.random.randint(low=0, high=generation_dim, size=num_samples)
-    _ind_num_class = (training_labels * (config['num_bins']-1)).flatten().astype(int)
-
-    training_images = converted_dict['fake_t_imgs'][_ind_num_samples, _ind_generation_dim, _ind_num_class]
-
-    output_dir = os.path.join(config['log_dir'], config['name'], 'test', 'metrics', 'substitutability')
-
-    tf.reset_default_graph()
-
-    train_classif(config['classifier_config'], overwrite_output_dir=output_dir, overwrite_training_images=training_images,
-                  overwrite_training_labels=training_labels)
-    tf.reset_default_graph()
-    train_names, train_prediction_y, train_true_y, test_names, test_prediction_y, test_true_y = test_classif(classifier_config, output_dir)
+    _edited_cls_config = yaml.load(open(config['substitutability_classifier_config']))
+    classifier_config['log_dir'] = _edited_cls_config['log_dir']
+    train_names, train_prediction_y, train_true_y, test_names, test_prediction_y, test_true_y = test_classif(
+        classifier_config)
     accuracy, precision, recall = calc_metrics_arr(np.argmax(test_prediction_y, axis=1), test_true_y)
 
     print('Substitutability - accuracy: {:.3f}, precision: {:.3f}, recall: {:.3f}'.format(accuracy, precision, recall))
@@ -521,7 +477,6 @@ if __name__ == "__main__":
     print(config)
 
     out_dir = os.path.join(config['log_dir'], config['name'], 'test')
-
 
     try:
         results_dict = get_results_from_file(out_dir)
