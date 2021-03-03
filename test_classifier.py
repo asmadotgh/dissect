@@ -7,7 +7,7 @@ import yaml
 import tensorflow as tf
 from classifier.DenseNet import pretrained_classifier as celeba_classifier
 from classifier.SimpleNet import pretrained_classifier as shapes_classifier
-from data_loader.data_loader import CelebALoader, ShapesLoader
+from data_loader.data_loader import ImageLabelLoader, ShapesLoader
 from utils import read_data_file
 import argparse
 import warnings
@@ -21,12 +21,9 @@ from sklearn.metrics import brier_score_loss, roc_auc_score, accuracy_score, rec
 import matplotlib.pyplot as plt
 
 
-def test(config, overwrite_output_dir=None):
+def test(config):
     # ============= Experiment Folder=============
-    if overwrite_output_dir is not None:
-        output_dir = overwrite_output_dir
-    else:
-        output_dir = os.path.join(config['log_dir'], config['name'])
+    output_dir = os.path.join(config['log_dir'], config['name'])
     classifier_output_path = os.path.join(output_dir, 'classifier_output')
     try:
         os.makedirs(classifier_output_path)
@@ -53,13 +50,13 @@ def test(config, overwrite_output_dir=None):
         test_ids = config['test']
     if dataset == 'CelebA':
         pretrained_classifier = celeba_classifier
-        my_data_loader = CelebALoader()
+        my_data_loader = ImageLabelLoader()
     elif dataset == 'shapes':
         pretrained_classifier = shapes_classifier
         my_data_loader = ShapesLoader()
     elif dataset == 'CelebA64' or dataset == 'dermatology':
         pretrained_classifier = celeba_classifier
-        my_data_loader = CelebALoader(input_size=64)
+        my_data_loader = ImageLabelLoader(input_size=64)
     # ============= Data =============
     try:
         categories, file_names_dict = read_data_file(image_label_dict)
