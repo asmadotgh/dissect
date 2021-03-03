@@ -5,7 +5,7 @@ import sys
 import os
 from classifier.DenseNet import pretrained_classifier as celeba_classifier
 from classifier.SimpleNet import pretrained_classifier as shapes_classifier
-from data_loader.data_loader import CelebALoader, ShapesLoader
+from data_loader.data_loader import ImageLabelLoader, ShapesLoader
 
 from explainer.ops import safe_log
 from explainer.networks_128 import Discriminator_Ordinal as Discriminator_Ordinal_128
@@ -91,7 +91,7 @@ def train():
     dataset = config['dataset']
     if dataset == 'CelebA':
         pretrained_classifier = celeba_classifier
-        my_data_loader = CelebALoader()
+        my_data_loader = ImageLabelLoader()
         Discriminator_Ordinal = Discriminator_Ordinal_128
         Generator_Encoder_Decoder = Generator_Encoder_Decoder_128
         Discriminator_Contrastive = Discriminator_Contrastive_128
@@ -107,7 +107,7 @@ def train():
         Discriminator_Contrastive = Discriminator_Contrastive_64
     elif dataset == 'CelebA64' or dataset == 'dermatology':
         pretrained_classifier = celeba_classifier
-        my_data_loader = CelebALoader(input_size=64)
+        my_data_loader = ImageLabelLoader(input_size=64)
         Discriminator_Ordinal = Discriminator_Ordinal_64
         Generator_Encoder_Decoder = Generator_Encoder_Decoder_64
         Discriminator_Contrastive = Discriminator_Contrastive_64

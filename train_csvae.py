@@ -6,7 +6,7 @@ import os
 
 from classifier.DenseNet import pretrained_classifier as celeba_classifier
 from classifier.SimpleNet import pretrained_classifier as shapes_classifier
-from data_loader.data_loader import CelebALoader, ShapesLoader
+from data_loader.data_loader import ImageLabelLoader, ShapesLoader
 
 from explainer.ops import KL, safe_log
 
@@ -100,7 +100,7 @@ def train():
     dataset = config['dataset']
     if dataset == 'CelebA':
         pretrained_classifier = celeba_classifier
-        my_data_loader = CelebALoader()
+        my_data_loader = ImageLabelLoader()
         EncoderZ = EncoderZ_128
         EncoderW = EncoderW_128
         DecoderX = DecoderX_128
@@ -120,7 +120,7 @@ def train():
 
     elif dataset == 'CelebA64' or dataset == 'dermatology':
         pretrained_classifier = celeba_classifier
-        my_data_loader = CelebALoader(input_size=64)
+        my_data_loader = ImageLabelLoader(input_size=64)
         EncoderZ = EncoderZ_64
         EncoderW = EncoderW_64
         DecoderX = DecoderX_64

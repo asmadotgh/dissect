@@ -33,7 +33,7 @@ class ArrayLoader(DataLoader):
         return self.images[imgs_names], self.labels[imgs_names]
 
 
-class CelebALoader(DataLoader):
+class ImageLabelLoader(DataLoader):
     def __init__(self, input_size=128):
         DataLoader.__init__(self)
         self.input_size = input_size
