@@ -7,10 +7,10 @@ dataset: 'dermatology'
 k_dim: 2
 lambda_r: 2.0
 
-image_dir: './data//dermatology/data_nov3b/'
+image_dir: './data/dermatology/data_nov3b/'
 image_label_dict: './output/classifier/dermatology-inflammatory-malignant/explainer_input/list_attr_10_5000.txt' #path where the training data as [image name, label] is saved. Here label is the bin-index. Refer ./test_classifier.py to see how to create this file from the classifier results.
 cls_experiment: './output/classifier/dermatology-inflammatory-malignant' #address where classifier checkpoint is saved
-log_dir: './output/discoverer/dermatology-inflammatory_experiments' #address where explainer/discoverer checkpoint and summaries will be saved
+log_dir: './output/discoverer_2020_05/dermatology-inflammatory_experiments' #address where explainer/discoverer checkpoint and summaries will be saved
 name: 'dermatology-inflammatory_Discoverer_multidim' #name of the folder at the above address
 
 num_channel: 3
@@ -36,7 +36,7 @@ save_summary: 20
 save_ckpt: 500
 # Save checkpoint after every how many iterations.
 
-ckpt_dir_continue: './output/discoverer/dermatology-inflammatory_experiments/dermatology-inflammatory_Discoverer_multidim'
+ckpt_dir_continue: './output/discoverer_2020_05/dermatology-inflammatory_experiments/dermatology-inflammatory_Discoverer_multidim'
 
 count_to_save: 10000
 # number of samples to save while testing
@@ -54,5 +54,5 @@ classifier_config: './configs/dermatology_experiments/dermatology_inflammatory-m
 calc_substitutability: False
 
 substitutability_attr: 'inflammatory-malignant'
-substitutability_classifier_config: './output/discoverer/dermatology-inflammatory_experiments/dermatology-inflammatory_Discoverer_multidim/dermatology_inflammatory-malignant_Classifier_substitutability.yaml'
+substitutability_classifier_config: './output/discoverer_2020_05/dermatology-inflammatory_experiments/dermatology-inflammatory_Discoverer_multidim/dermatology_inflammatory-malignant_Classifier_substitutability.yaml'
 

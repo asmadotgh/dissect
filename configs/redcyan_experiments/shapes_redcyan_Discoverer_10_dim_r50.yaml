@@ -10,7 +10,7 @@ lambda_r: 50.0
 image_dir: ''
 image_label_dict: './output/classifier/shapes-redcyan/explainer_input/list_attr_3_5000.txt' #path where the training data as [image name, label] is saved. Here label is the bin-index. Refer ./test_classifier.py to see how to create this file from the classifier results.
 cls_experiment: './output/classifier/shapes-redcyan' #address where classifier checkpoint is saved
-log_dir: './output/discoverer/redcyan_experiments' #address where explainer/discoverer checkpoint and summaries will be saved
+log_dir: './output/discoverer_2020_05/redcyan_experiments' #address where explainer/discoverer checkpoint and summaries will be saved
 name: 'shapes_redcyan_Discoverer_10_dim_r50' #name of the folder at the above address
 
 num_channel: 3
@@ -36,7 +36,7 @@ save_summary: 20
 save_ckpt: 500
 # Save checkpoint after every how many iterations.
 
-ckpt_dir_continue: './output/discoverer/redcyan_experiments/shapes_redcyan_Discoverer_10_dim_r50'
+ckpt_dir_continue: './output/discoverer_2020_05/redcyan_experiments/shapes_redcyan_Discoverer_10_dim_r50'
 
 count_to_save: 10000
 # number of samples to save while testing
@@ -53,4 +53,4 @@ classifier_config: './configs/redcyan_experiments/shapes_redcyan_Classifier.yaml
 calc_substitutability: False
 
 substitutability_attr: 'Smiling'
-substitutability_classifier_config: './output/discoverer/redcyan_experiments/shapes_redcyan_Discoverer_10_dim_r50/shapes_redcyan_Classifier_substitutability.yaml'
+substitutability_classifier_config: './output/discoverer_2020_05/redcyan_experiments/shapes_redcyan_Discoverer_10_dim_r50/shapes_redcyan_Classifier_substitutability.yaml'
