@@ -48,3 +48,9 @@ metrics_test_ratio: 0.25
 metrics_stability_nx: 5
 metrics_stability_var: 0.01
 classifier_config: './configs/dermatology_experiments/dermatology_inflammatory-malignant_Classifier.yaml'
+
+# hyperparameters for saving results for substitutability metric
+calc_substitutability: False
+
+substitutability_attr: 'inflammatory-malignant'
+substitutability_classifier_config: './output/discoverer/dermatology-inflammatory_experiments/dermatology-inflammatory_Explainer_multidim/dermatology_inflammatory-malignant_Classifier_substitutability.yaml'
