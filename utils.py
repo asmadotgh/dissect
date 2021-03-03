@@ -61,7 +61,6 @@ def load_images_and_labels(imgs_names, image_dir, n_class, attr_list, input_size
             labels[i] = attr_list[img_name]
         except:
             print(img_name)
-            pdb.set_trace()
     labels[np.where(labels == -1)] = 0
     return imgs, labels
 
@@ -127,6 +126,44 @@ def save_images(img, sample_file, num_samples, nums_class, k_dim=1, image_size=1
 def save_image(img, sample_file):
     img = inverse_image(img)
     scm.imsave(sample_file, img)
+
+
+def save_batch_images(imgs, sample_files, ind_generation_dim, ind_nums_class, label_scaler, output_dir,
+                      has_extension=True):
+    exported_dict = {}
+    for i in range(len(sample_files)):
+        dim = ind_generation_dim[i]
+        unscaled_cls = int(ind_nums_class[i])
+        cls = int(unscaled_cls * label_scaler)
+        img = inverse_image(imgs[i, dim, cls])
+        if has_extension:
+            img_name = sample_files[i][:-4]+'_dim_{}_cls_{}.{}'.format(dim, cls, sample_files[i][-3:])
+        else:
+            img_name = sample_files[i] + '_dim_{}_cls_{}.jpg'.format(dim, cls)
+        img_dir_name = os.path.join(output_dir, img_name)
+        scm.imsave(img_dir_name, img)
+        exported_dict[img_name] = unscaled_cls
+    return exported_dict
+
+
+def save_dict(my_dict, filename, attribute):
+    first_line = str(len(my_dict.keys())) + '\n'
+    second_line = ''.join(attribute) + "\n"
+    with open(filename, 'w') as f:
+        f.write(first_line)
+        f.write(second_line)
+        for key in my_dict.keys():
+            f.write("{} {}\n".format(key, my_dict[key]))
+
+
+def save_config_dict(my_dict, filename):
+    with open(filename, 'w') as f:
+        for key in my_dict.keys():
+            val = my_dict[key]
+            if isinstance(val, str):
+                f.write("{}: '{}'\n".format(key, val))
+            else:
+                f.write("{}: {}\n".format(key, val))
 
 
 def calc_metrics_arr(prediction, labels, average='binary'):
