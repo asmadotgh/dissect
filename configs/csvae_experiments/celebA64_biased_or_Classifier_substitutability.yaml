@@ -1,0 +1,13 @@
+train: './output/csvae_experiments/celeba64_biased_or_csvae_multidim/test/substitutability_input/train_ids.npy'
+dataset: 'CelebA64'
+test: ''
+num_channel: 3
+batch_size: 32
+image_label_dict: './output/csvae_experiments/celeba64_biased_or_csvae_multidim/test/substitutability_input/Smiling_dims_2_clss_5.txt'
+log_dir: './output/csvae_experiments/celeba64_biased_or_csvae_multidim/test/substitutability_input'
+epochs: 5
+num_class: 1
+input_size: 64
+name: 'CelebA64-biased_or'
+ckpt_dir_continue: ''
+image_dir: './output/csvae_experiments/celeba64_biased_or_csvae_multidim/test/substitutability_input/images'

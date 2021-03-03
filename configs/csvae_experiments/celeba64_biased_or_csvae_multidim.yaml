@@ -58,3 +58,9 @@ metrics_test_ratio: 0.25
 metrics_stability_nx: 5
 metrics_stability_var: 0.01
 classifier_config: './configs/celeba64_biased_or_experiments/celebA64_biased_or_Classifier.yaml'
+
+# hyperparameters for saving results for substitutability metric
+calc_substitutability: False
+
+substitutability_attr: 'Smiling'
+substitutability_classifier_config: './output/csvae_experiments/celeba64_biased_or_csvae_multidim/celebA64_biased_or_Classifier_substitutability.yaml'

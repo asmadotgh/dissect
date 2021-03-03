@@ -1,0 +1,21 @@
+###########
+# Classifier #
+###########
+
+# this is a classifier trying to predict smile, but confounded with young and blond
+dataset: 'CelebA64'
+image_dir: './data/CelebA/images/'
+
+image_label_dict: './data/CelebA/biased_or/Smiling_binary_classification.txt'
+train: './data/CelebA/biased_or/train_ids.npy' # './data/CelebA/biased_or/train_ids_dbg_100.npy'
+test: './data/CelebA/biased_or/test_ids.npy' # './data/CelebA/biased_or/test_ids_dbg_100.npy'
+
+log_dir: './output/classifier'
+name: 'CelebA64-biased_or'
+
+num_channel: 3
+num_class: 1
+input_size: 64
+batch_size: 32
+epochs: 5
+ckpt_dir_continue: ''
