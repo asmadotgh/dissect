@@ -137,9 +137,9 @@ def save_batch_images(imgs, sample_files, ind_generation_dim, ind_nums_class, la
         cls = int(unscaled_cls * label_scaler)
         img = inverse_image(imgs[i, dim, cls])
         if has_extension:
-            img_name = sample_files[i][:-4]+'_dim_{}_cls_{}.{}'.format(dim, cls, sample_files[i][-3:])
+            img_name = '{}_dim_{}_cls_{}.{}'.format(sample_files[i][:-4], dim, cls, sample_files[i][-3:])
         else:
-            img_name = sample_files[i] + '_dim_{}_cls_{}.jpg'.format(dim, cls)
+            img_name = '{}_dim_{}_cls_{}.jpg'.format(sample_files[i], dim, cls)
         img_dir_name = os.path.join(output_dir, img_name)
         scm.imsave(img_dir_name, img)
         exported_dict[img_name] = unscaled_cls
