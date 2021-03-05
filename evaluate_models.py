@@ -360,8 +360,7 @@ def calc_substitutability(config):
 
     _edited_cls_config = yaml.load(open(config['substitutability_classifier_config']))
     classifier_config['log_dir'] = _edited_cls_config['log_dir']
-    _, _, _, _, test_prediction_y, test_true_y = test_classif(
-        classifier_config)
+    _, _, _, _, test_prediction_y, test_true_y = test_classif(classifier_config)
     accuracy, precision, recall = calc_metrics_arr(np.argmax(test_prediction_y, axis=1), test_true_y)
 
     print('Substitutability - accuracy: {:.3f}, precision: {:.3f}, recall: {:.3f}, original accuracy: {:.3f}, original precision: {:.3f}, original recall: {:.3f}'.format(
@@ -476,24 +475,33 @@ def get_results_from_file(output_dir):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', '-c', type=str)
+    parser.add_argument('--skip_eval', '-skip', action='store_true')
+    parser.add_argument('--substitutability', '-s', action='store_true')
     args = parser.parse_args()
 
     config = yaml.load(open(args.config))
     print(config)
 
     out_dir = os.path.join(config['log_dir'], config['name'], 'test')
-
-    try:
-        results_dict = get_results_from_file(out_dir)
-    except:
-        print('Results files do not exist. Running test explainer/discoverer/CSVAE to produce results...')
-        if 'w_dim' in config.keys():
-            results_dict = test_csvae(config)
-        elif 'k_dim' in config.keys():
-            results_dict = test_discoverer(config)
-        else:
-            raise Exception('Config file not supported. Either CSVAE type or explainer/discoverer type...')
-        pass
-
     metrics_dir = os.path.join(out_dir, 'metrics')
-    evaluate(results_dict, config, output_dir=metrics_dir)
+
+    if args.substitutability:
+        metrics_dict = pd.read_csv(os.path.join(metrics_dir, 'metrics.csv'), index_col=0).iloc[0].to_dict()
+        substitutability_dict = calc_substitutability(config)
+        metrics_dict.update(substitutability_dict)
+        _save_csv(metrics_dir, metrics_dict)
+
+    if not args.skip_eval:
+        try:
+            results_dict = get_results_from_file(out_dir)
+        except:
+            print('Results files do not exist. Running test explainer/discoverer/CSVAE to produce results...')
+            if 'w_dim' in config.keys():
+                results_dict = test_csvae(config)
+            elif 'k_dim' in config.keys():
+                results_dict = test_discoverer(config)
+            else:
+                raise Exception('Config file not supported. Either CSVAE type or explainer/discoverer type...')
+            pass
+
+        evaluate(results_dict, config, output_dir=metrics_dir)
