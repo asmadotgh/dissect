@@ -133,7 +133,8 @@ def save_batch_images(imgs, sample_files, ind_generation_dim, ind_nums_class, la
     exported_dict = {}
     for i in range(len(sample_files)):
         dim = ind_generation_dim[i]
-        unscaled_cls = int(ind_nums_class[i])
+        # flip classification outcome
+        unscaled_cls = 1 - int(ind_nums_class[i])
         cls = int(unscaled_cls * label_scaler)
         img = inverse_image(imgs[i, dim, cls])
         if has_extension:
