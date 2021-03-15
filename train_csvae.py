@@ -23,7 +23,7 @@ from explainer.networks_64 import DecoderY as DecoderY_64
 import tensorflow.contrib.slim as slim
 import tensorflow as tf
 import numpy as np
-from utils import save_image, read_data_file, make3d_tensor, make4d_tensor, convert_ordinal_to_binary
+from utils import save_image, read_data_file, make3d_tensor, make4d_tensor
 from losses import *
 import pdb
 import yaml
@@ -370,7 +370,7 @@ def train():
                 my_feed_dict = {y_target: target_labels, x_source: img, train_phase: False,
                                 y_s: labels}
 
-                sample_fake_img_traversal, sample_fake_2d_img_traversal = sess.run([fake_img_traversal_save, fake_img_traversal_save], feed_dict=my_feed_dict)
+                sample_fake_img_traversal, sample_fake_2d_img_traversal = sess.run([fake_img_traversal_save, fake_2d_img_traversal_save], feed_dict=my_feed_dict)
 
                 # save samples
                 sample_file = os.path.join(sample_dir, '%06d.jpg' % step)
