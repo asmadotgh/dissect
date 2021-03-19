@@ -188,7 +188,6 @@ def train():
     fake_img_traversal_board = make4d_tensor(fake_img_traversal, channels, input_size, w_dim, NUMS_CLASS, BATCH_SIZE)
     fake_img_traversal_save = make3d_tensor(fake_img_traversal, channels, input_size, w_dim, NUMS_CLASS, BATCH_SIZE)
 
-
     # Create and save 2d traversal, this is relevant only for w_dim == 2
     fake_2d_img_traversal = tf.zeros([0, input_size, input_size, channels])
     for i in range(NUMS_CLASS):
