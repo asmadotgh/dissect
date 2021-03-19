@@ -291,9 +291,17 @@ def test(config, dbg_img_label_dict=None, dbg_mode=False, export_output=True, db
         labels = labels.ravel()
         labels = np.eye(NUMS_CLASS_cls)[labels.astype(int)]
 
-        target_labels = np.tile(
-            np.repeat(np.expand_dims(np.asarray(range(NUMS_CLASS)), axis=1), generation_dim, axis=1),  # [NUMS_CLASS, w_dim]
-            (num_seed_imgs*generation_dim, 1))  # [num_seed_imgs * w_dim * NUMS_CLASS, w_dim]
+        _dim_bin_arr = np.zeros((generation_dim*NUMS_CLASS, generation_dim))
+        for _gen_dim in range(generation_dim):
+            _start = _gen_dim * NUMS_CLASS
+            _end = (_gen_dim + 1) * NUMS_CLASS
+            _dim_bin_arr_sub = np.zeros((NUMS_CLASS, generation_dim))
+            _dim_bin_arr_sub[:, _gen_dim] = np.asarray(range(NUMS_CLASS))
+            _dim_bin_arr[_start:_end, :] = _dim_bin_arr_sub
+        target_labels = np.tile(_dim_bin_arr, (num_seed_imgs, 1))  # [num_seed_imgs * w_dim * NUMS_CLASS, w_dim]
+        # target_labels = np.tile(
+        #     np.repeat(np.expand_dims(np.asarray(range(NUMS_CLASS)), axis=1), generation_dim, axis=1),
+        #     (num_seed_imgs*generation_dim, 1))  # [num_seed_imgs * w_dim * NUMS_CLASS, w_dim]
 
         my_feed_dict = {y_target: target_labels, x_source: img_repeat, train_phase: False,
                         y_s: labels}
