@@ -433,7 +433,7 @@ def calc_stability(results_dict, config):
         _x = np.repeat(np.expand_dims(x, axis=ax), rep, axis=ax)
         _x_reshaped = _my_reshape(_x)
         y_reshaped = _my_reshape(y)
-        return np.mean(jensenshannon(_x_reshaped, y_reshaped))
+        return np.mean(np.nan_to_num(jensenshannon(_x_reshaped, y_reshaped)))
 
     mse_fake_t_img = _mean_sq_diff(results_dict['fake_t_imgs'], results_dict['stability_fake_t_imgs'])
     mse_fake_s_recon_img = _mean_sq_diff(results_dict['fake_s_recon_imgs'], results_dict['stability_fake_s_recon_imgs'])
