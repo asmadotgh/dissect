@@ -10,7 +10,8 @@ import argparse
 from scipy.stats import entropy, pearsonr, spearmanr
 from metrics.posthoc_classification import classifier_distinct_64, classifier_realistic_64
 import tensorflow as tf
-from utils import calc_metrics_arr, calc_accuracy, safe_append
+from utils import calc_metrics_arr, calc_accuracy, safe_append, inverse_image, unstack
+from scipy.spatial.distance import jensenshannon
 from sklearn.metrics import mean_squared_error
 import math
 from test_classifier import test as test_classif
@@ -21,6 +22,13 @@ np.random.seed(0)
 
 
 _EMPTY_ARR = np.empty([0])
+# FILES_TO_LOAD = ['names', 'real_imgs', 'fake_t_imgs', 'fake_t_embeds', 'fake_s_imgs', 'fake_s_embeds',
+#                  'fake_s_recon_imgs', 's_embeds', 'real_ps', 'recon_ps', 'fake_target_ps', 'fake_ps']
+# only loading the subset needed for the analyses:
+FILES_TO_LOAD = ['real_imgs', 'fake_t_imgs', 'real_ps', 'fake_target_ps', 'fake_ps',
+                 'fake_s_recon_imgs', 'recon_ps',
+                 'stability_fake_t_imgs', 'stability_fake_s_recon_imgs', 'stability_recon_ps','stability_fake_ps'
+]
 
 
 def _save_csv(out_dir, out_dict):
@@ -234,7 +242,9 @@ def calc_realistic(results_dict, config):
     data_real = results_dict['real_imgs']
     fake_inds = np.arange(half_len)
     fake_knob = np.random.randint(low=0, high=N_KNOBS, size=half_len)
-    fake_bin = np.random.randint(low=0, high=NUM_BINS, size=half_len)
+    # fake_bin = np.random.randint(low=0, high=NUM_BINS, size=half_len)
+    fake_bin = np.random.randint(low=0, high=2, size=half_len)
+    fake_bin = fake_bin * (NUM_BINS-1)
     data_fake = results_dict['fake_t_imgs'][fake_inds, fake_knob, fake_bin]
 
     data = np.append(data_real, data_fake, axis=0)
@@ -399,21 +409,68 @@ def calc_stability(results_dict, config):
 
     def _mean_sq_diff(x, y, rep=num_randoms, ax=1):
         _x = np.repeat(np.expand_dims(x, axis=ax), rep, axis=ax)
-        return np.mean((_x-y)**2)
+        return np.mean((inverse_image(_x)-inverse_image(y))**2)
 
-    l2_fake_t_img = _mean_sq_diff(results_dict['fake_t_imgs'], results_dict['stability_fake_t_imgs'])
-    l2_fake_s_recon_img = _mean_sq_diff(results_dict['fake_s_recon_imgs'], results_dict['stability_fake_s_recon_imgs'])
-    l2_recon_p = _mean_sq_diff(results_dict['recon_ps'], results_dict['stability_recon_ps'])
-    l2_fake_p = _mean_sq_diff(results_dict['fake_ps'], results_dict['stability_fake_ps'])
+    def _my_reshape(inp):
+        # inp [num_samples, num_randoms, generation_dim, bins, num_classification]
+        # inp_reshaped [num_classification, num_samples * num_randoms * generation_dim * bins]
+        inp_reshaped = unstack(inp, axis=2)  # generation_dim * [num_samples, num_randoms, bins, num_classification]
+        inp_reshaped = np.concatenate(inp_reshaped,
+                                      axis=2)  # [num_samples, num_randoms, generation_dim * bins, num_classification]
+        inp_reshaped = unstack(inp_reshaped,
+                               axis=1)  # num_randoms * [num_samples, generation_dim * bins, num_classification]
+        inp_reshaped = np.concatenate(inp_reshaped,
+                                      axis=1)  # [num_samples, num_randoms * generation_dim * bins, num_classification]
+        inp_reshaped = unstack(inp_reshaped,
+                               axis=0)  # num_samples * [num_randoms * generation_dim * bins, num_classification]
+        inp_reshaped = np.concatenate(inp_reshaped,
+                                      axis=0)  # [num_samples, num_randoms * generation_dim * bins, num_classification]
+        inp_reshaped = np.transpose(inp_reshaped,
+                                    (1, 0))  # [num_classification, num_samples, num_randoms * generation_dim * bins]
+        return inp_reshaped
 
-    print('Stability - l2_fake_t_img: {:.3f}, l2_fake_s_recon_img: {:.3f}, l2_recon_p: {:.3f}, l2_fake_p:{:.3f}'.format(
-        l2_fake_t_img, l2_fake_s_recon_img, l2_recon_p, l2_fake_p))
+    def _jsd(x, y, rep=num_randoms, ax=1):
+        _x = np.repeat(np.expand_dims(x, axis=ax), rep, axis=ax)
+        _x_reshaped = _my_reshape(_x)
+        y_reshaped = _my_reshape(y)
+        return np.mean(jensenshannon(_x_reshaped, y_reshaped))
+
+    mse_fake_t_img = _mean_sq_diff(results_dict['fake_t_imgs'], results_dict['stability_fake_t_imgs'])
+    mse_fake_s_recon_img = _mean_sq_diff(results_dict['fake_s_recon_imgs'], results_dict['stability_fake_s_recon_imgs'])
+    jsd_recon_p = _jsd(results_dict['recon_ps'], results_dict['stability_recon_ps'])
+    jsd_fake_p = _jsd(results_dict['fake_ps'], results_dict['stability_fake_ps'])
+
+    print('Stability - mse_fake_t_img: {:.3f}, mse_fake_s_recon_img: {:.3f}, jsd_recon_p: {:.3f}, jsd_fake_p:{:.3f}'.format(
+        mse_fake_t_img, mse_fake_s_recon_img, jsd_recon_p, jsd_fake_p))
     metrics_dict = {}
-    for metric in ['l2_fake_t_img', 'l2_fake_s_recon_img', 'l2_recon_p', 'l2_fake_p']:
+    for metric in ['mse_fake_t_img', 'mse_fake_s_recon_img', 'jsd_recon_p', 'jsd_fake_p']:
         metrics_dict.update({'stability_{}'.format(metric): [eval(metric)]})
 
     print('Metrics successfully calculated: Stability')
     return metrics_dict
+
+
+# def calc_stability(results_dict, config):
+#     print('Calculating metrics for: Stability')
+#     num_randoms = config['metrics_stability_nx']
+#
+#     def _mean_sq_diff(x, y, rep=num_randoms, ax=1):
+#         _x = np.repeat(np.expand_dims(x, axis=ax), rep, axis=ax)
+#         return np.mean((_x-y)**2)
+#
+#     l2_fake_t_img = _mean_sq_diff(results_dict['fake_t_imgs'], results_dict['stability_fake_t_imgs'])
+#     l2_fake_s_recon_img = _mean_sq_diff(results_dict['fake_s_recon_imgs'], results_dict['stability_fake_s_recon_imgs'])
+#     l2_recon_p = _mean_sq_diff(results_dict['recon_ps'], results_dict['stability_recon_ps'])
+#     l2_fake_p = _mean_sq_diff(results_dict['fake_ps'], results_dict['stability_fake_ps'])
+#
+#     print('Stability - l2_fake_t_img: {:.3f}, l2_fake_s_recon_img: {:.3f}, l2_recon_p: {:.3f}, l2_fake_p:{:.3f}'.format(
+#         l2_fake_t_img, l2_fake_s_recon_img, l2_recon_p, l2_fake_p))
+#     metrics_dict = {}
+#     for metric in ['l2_fake_t_img', 'l2_fake_s_recon_img', 'l2_recon_p', 'l2_fake_p']:
+#         metrics_dict.update({'stability_{}'.format(metric): [eval(metric)]})
+#
+#     print('Metrics successfully calculated: Stability')
+#     return metrics_dict
 
 
 def evaluate(results_dict, config, output_dir=None, export_output=True):
@@ -450,18 +507,11 @@ def evaluate(results_dict, config, output_dir=None, export_output=True):
     return metrics_dict
 
 
-def get_results_from_file(output_dir):
+def get_results_from_file(output_dir, files_to_load=FILES_TO_LOAD):
     print(output_dir)
     if not os.path.exists(output_dir):
         raise ValueError('Directory {} does not exist.'.format(output_dir))
     # Read Explainer/Discoverer Results
-    # files_to_load = ['names', 'real_imgs', 'fake_t_imgs', 'fake_t_embeds', 'fake_s_imgs', 'fake_s_embeds',
-    #                  'fake_s_recon_imgs', 's_embeds', 'real_ps', 'recon_ps', 'fake_target_ps', 'fake_ps']
-    # only loading the subset needed for the analyses:
-    files_to_load = ['real_imgs', 'fake_t_imgs', 'real_ps', 'fake_target_ps', 'fake_ps',
-                     'fake_s_recon_imgs', 'recon_ps',
-                     'stability_fake_t_imgs', 'stability_fake_s_recon_imgs', 'stability_recon_ps','stability_fake_ps'
-    ]
     results_dict = {}
     for fname in files_to_load:
         curr_file = os.path.join(output_dir, fname+'.npy')
@@ -477,6 +527,8 @@ if __name__ == "__main__":
     parser.add_argument('--config', '-c', type=str)
     parser.add_argument('--skip_eval', '-skip', action='store_true')
     parser.add_argument('--substitutability', '-s', action='store_true')
+    parser.add_argument('--realistic', '-r', action='store_true')
+    parser.add_argument('--stability', '-stab', action='store_true')
     args = parser.parse_args()
 
     config = yaml.load(open(args.config))
@@ -489,6 +541,22 @@ if __name__ == "__main__":
         metrics_dict = pd.read_csv(os.path.join(metrics_dir, 'metrics.csv'), index_col=0).iloc[0].to_dict()
         substitutability_dict = calc_substitutability(config)
         metrics_dict.update(substitutability_dict)
+        _save_csv(metrics_dir, metrics_dict)
+
+    if args.realistic:
+        metrics_dict = pd.read_csv(os.path.join(metrics_dir, 'metrics.csv'), index_col=0).iloc[0].to_dict()
+        results_dict = get_results_from_file(out_dir, files_to_load=['real_imgs', 'fake_t_imgs'])
+        realistic_dict = calc_realistic(results_dict, config)
+        metrics_dict.update(realistic_dict)
+        _save_csv(metrics_dir, metrics_dict)
+
+    if args.stability:
+        metrics_dict = pd.read_csv(os.path.join(metrics_dir, 'metrics.csv'), index_col=0).iloc[0].to_dict()
+        results_dict = get_results_from_file(out_dir, files_to_load=[
+            'fake_t_imgs', 'fake_s_recon_imgs', 'recon_ps', 'fake_ps',
+            'stability_fake_t_imgs', 'stability_fake_s_recon_imgs', 'stability_recon_ps', 'stability_fake_ps'])
+        stability_dict = calc_stability(results_dict, config)
+        metrics_dict.update(stability_dict)
         _save_csv(metrics_dir, metrics_dict)
 
     if not args.skip_eval:
