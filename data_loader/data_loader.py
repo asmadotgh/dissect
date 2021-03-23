@@ -1,6 +1,8 @@
 import numpy as np
 from tqdm import tqdm
-import scipy.misc as scm
+# import scipy.misc as scm
+from PIL import Image
+from matplotlib.pyplot import imread
 import os
 from utils import crop_center
 import h5py
@@ -44,10 +46,11 @@ class ImageLabelLoader(DataLoader):
         labels = np.zeros((imgs_names.shape[0], n_class), dtype=np.float32)
 
         for i, img_name in tqdm(enumerate(imgs_names)):
-            img = scm.imread(os.path.join(image_dir, img_name))
+            img = imread(os.path.join(image_dir, img_name))
             if do_center_crop and self.input_size == 128:
                 img = crop_center(img, 150, 150)
-            img = scm.imresize(img, [self.input_size, self.input_size, num_channel])
+            img = np.array(Image.fromarray(img).resize((self.input_size, self.input_size)))
+            # img = scm.imresize(img, [self.input_size, self.input_size, num_channel]) # not supported by scipy>=1.4
             img = np.reshape(img, [self.input_size, self.input_size, num_channel])
             img = img / 255.0
             img = img - 0.5

@@ -2,7 +2,8 @@ import os
 import pickle
 import numpy as np
 from tqdm import tqdm
-import scipy.misc as scm
+from PIL import Image
+from matplotlib.pyplot import imread
 import pdb
 import os
 from glob import glob
@@ -48,10 +49,11 @@ def load_images_and_labels(imgs_names, image_dir, n_class, attr_list, input_size
     labels = np.zeros((imgs_names.shape[0], n_class), dtype=np.float32)
 
     for i, img_name in tqdm(enumerate(imgs_names)):
-        img = scm.imread(os.path.join(image_dir, img_name))
+        img = imread(os.path.join(image_dir, img_name))
         if do_center_crop and input_size == 128:
             img = crop_center(img, 150, 150)
-        img = scm.imresize(img, [input_size, input_size, num_channel])
+        img = np.array(Image.fromarray(img).resize((input_size, input_size)))
+        # img = scm.imresize(img, [input_size, input_size, num_channel]) # not supported by scipy>=1.4
         img = np.reshape(img, [input_size, input_size, num_channel])
         img = img / 255.0
         img = img - 0.5
@@ -120,12 +122,16 @@ def save_images(img, sample_file, num_samples, nums_class, k_dim=1, image_size=1
     n_cols = nums_class
     img = make3d(img, num_channel=num_channel, image_size=image_size, row=n_rows, col=n_cols)
     img = inverse_image(img)
-    scm.imsave(sample_file, img)
+    img = Image.fromarray(img, 'RGB')
+    img.save(sample_file, "JPEG")
+    # scm.imsave(sample_file, img) # not supported by scipy>=1.4
 
 
 def save_image(img, sample_file):
     img = inverse_image(img)
-    scm.imsave(sample_file, img)
+    img = Image.fromarray(img, 'RGB')
+    img.save(sample_file, "JPEG")
+    # scm.imsave(sample_file, img) # not supported by scipy>=1.4
 
 
 def save_batch_images(imgs, sample_files, ind_generation_dim, ind_nums_class, label_scaler, output_dir,
@@ -142,7 +148,9 @@ def save_batch_images(imgs, sample_files, ind_generation_dim, ind_nums_class, la
         else:
             img_name = '{}_dim_{}_cls_{}.jpg'.format(sample_files[i], dim, cls)
         img_dir_name = os.path.join(output_dir, img_name)
-        scm.imsave(img_dir_name, img)
+        img = Image.fromarray(img, 'RGB')
+        img.save(img_dir_name, "JPEG")
+        # scm.imsave(img_dir_name, img) # not supported by scipy>=1.4
         exported_dict[img_name] = unscaled_cls
     return exported_dict
 
