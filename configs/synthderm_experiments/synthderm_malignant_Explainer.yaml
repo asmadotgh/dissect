@@ -24,12 +24,12 @@ input_size: 64
 batch_size: 32
 epochs: 300
 
-lambda_GAN: 1
+lambda_GAN: 2
 lambda_cyc: 100
 lambda_cls: 1
 
-discriminate_every_nth: 1
-generate_every_nth: 5
+discriminate_every_nth: 5
+generate_every_nth: 1
 
 save_summary: 20
 # Save sample images after every how many iterations.
