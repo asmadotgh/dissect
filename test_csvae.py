@@ -142,7 +142,14 @@ def test(config, dbg_img_label_dict=None, dbg_mode=False, export_output=True, db
         EncoderW = EncoderW_64
         DecoderX = DecoderX_64
         DecoderY = DecoderY_64
-    elif dataset == 'CelebA64' or dataset == 'dermatology' or dataset == 'synthderm':
+    elif dataset == 'CelebA64' or dataset == 'dermatology':
+        my_data_loader = ImageLabelLoader(input_size=64)
+        pretrained_classifier = celeba_classifier
+        EncoderZ = EncoderZ_64
+        EncoderW = EncoderW_64
+        DecoderX = DecoderX_64
+        DecoderY = DecoderY_64
+    elif dataset == 'synthderm':
         my_data_loader = ImageLabelLoader(input_size=64)
         pretrained_classifier = celeba_classifier
         EncoderZ = EncoderZ_64

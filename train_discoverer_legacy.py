@@ -108,7 +108,13 @@ def train():
         Discriminator_Ordinal = Discriminator_Ordinal_64
         Generator_Encoder_Decoder = Generator_Encoder_Decoder_64
         Discriminator_Contrastive = Discriminator_Contrastive_64
-    elif dataset == 'CelebA64' or dataset == 'dermatology' or dataset == 'synthderm':
+    elif dataset == 'CelebA64' or dataset == 'dermatology':
+        pretrained_classifier = celeba_classifier
+        my_data_loader = ImageLabelLoader(input_size=64)
+        Discriminator_Ordinal = Discriminator_Ordinal_64
+        Generator_Encoder_Decoder = Generator_Encoder_Decoder_64
+        Discriminator_Contrastive = Discriminator_Contrastive_64
+    elif dataset == 'synthderm':
         pretrained_classifier = celeba_classifier
         my_data_loader = ImageLabelLoader(input_size=64)
         Discriminator_Ordinal = Discriminator_Ordinal_64

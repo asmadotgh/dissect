@@ -50,7 +50,10 @@ def train(config_path, overwrite_output_dir=None):
             my_data_loader = ShapesLoader()
         else:
             my_data_loader = ImageLabelLoader(input_size=64)
-    elif dataset == 'CelebA64' or dataset == 'dermatology' or dataset == 'synthderm':
+    elif dataset == 'CelebA64' or dataset == 'dermatology':
+        pretrained_classifier = celeba_classifier
+        my_data_loader = ImageLabelLoader(input_size=64)
+    elif dataset == 'synthderm':
         pretrained_classifier = celeba_classifier
         my_data_loader = ImageLabelLoader(input_size=64)
     if ckpt_dir_continue == '':

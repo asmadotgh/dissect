@@ -124,7 +124,13 @@ def test(config, dbg_img_label_dict=None, dbg_mode=False, export_output=True, db
         pretrained_classifier = shapes_classifier
         Discriminator_Ordinal = Discriminator_Ordinal_64
         Generator_Encoder_Decoder = Generator_Encoder_Decoder_64
-    elif dataset == 'CelebA64' or dataset == 'dermatology' or dataset == 'synthderm':
+    elif dataset == 'CelebA64' or dataset == 'dermatology':
+        my_data_loader = ImageLabelLoader(input_size=64)
+        EMBEDDING_SIZE = embedding_size_64()
+        pretrained_classifier = celeba_classifier
+        Discriminator_Ordinal = Discriminator_Ordinal_64
+        Generator_Encoder_Decoder = Generator_Encoder_Decoder_64
+    elif dataset == 'synthderm':
         my_data_loader = ImageLabelLoader(input_size=64)
         EMBEDDING_SIZE = embedding_size_64()
         pretrained_classifier = celeba_classifier
