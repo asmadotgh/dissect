@@ -39,7 +39,7 @@ beta4: 10.
 beta5: 1.
 
 z_dim: 2
-w_dim: 2
+w_dim: 5
 
 save_summary: 20
 # Save sample images after every how many iterations.
