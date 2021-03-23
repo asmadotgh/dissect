@@ -23,31 +23,22 @@ class Generator_Encoder_Decoder:
             inputs = relu(conditional_batchnorm(inputs, "BN1"))
             inputs = conv("conv1", inputs, k_size=3, nums_out=64, strides=1)  # [n, 64, 64, 64]
             print(':', inputs)
-            # inputs = G_Resblock_Encoder("Encoder-ResBlock4", inputs, 256, y,
-            #                             nums_class)  # [n, 32, 32, 256]
-            # print(':', inputs)
             inputs = G_Resblock_Encoder("Encoder-ResBlock3", inputs, 512, y,
-                                        nums_class)  # [n, 16, 16, 512]
+                                        nums_class)  # [n, 32, 32, 512]
             print(':', inputs)
             inputs = G_Resblock_Encoder("Encoder-ResBlock2", inputs, 1024, y,
-                                        nums_class)  # [n, 8, 8, 1024]
+                                        nums_class)  # [n, 16, 16, 1024]
             print(':', inputs)
             embedding = G_Resblock_Encoder("Encoder-ResBlock1", inputs, 1024, y,
-                                           nums_class)  # [n, 4, 4, 1024]
+                                           nums_class)  # [n, 8, 8, 1024]
             print(':', embedding)
 
-            # pdb.set_trace()
-            # inputs = dense("dense", inputs, 1024*4*4) #[n, 128] --> [n, 1024 * 4* 4]
-            # inputs = tf.reshape(inputs, [-1, 4, 4, 1024]) #[n, 4, 4, 1024]
-
-            inputs = G_Resblock("ResBlock1", embedding, 1024, y, nums_class)  # [n, 8, 8, 1024]
+            inputs = G_Resblock("ResBlock1", embedding, 1024, y, nums_class)  # [n, 16, 16, 1024]
             print(':', inputs)
-            inputs = G_Resblock("ResBlock2", inputs, 512, y, nums_class)  # [n, 16, 16, 512]
+            inputs = G_Resblock("ResBlock2", inputs, 512, y, nums_class)  # [n, 32, 32, 512]
             print(':', inputs)
-            inputs = G_Resblock("ResBlock3", inputs, 256, y, nums_class)  # [n, 32, 32, 256]
+            inputs = G_Resblock("ResBlock3", inputs, 256, y, nums_class)  # [n, 64, 64, 256]
             print(':', inputs)
-            # inputs = G_Resblock("ResBlock4", inputs, 128, y, nums_class)  # [n, 64, 64, 128]
-            # print(':', inputs)
             inputs = relu(conditional_batchnorm(inputs, "BN"))
             inputs = conv("conv", inputs, k_size=3, nums_out=num_channel, strides=1)  # [n, 64, 64, 3]
             print(':', inputs)
@@ -73,10 +64,8 @@ class Discriminator_Ordinal:
             print(inputs)
             inputs = D_Resblock("ResBlock4", inputs, 512, update_collection, is_down=True)  # [n, 4, 4, 512]
             print(inputs)
-            # inputs = D_Resblock("ResBlock5", inputs, 1024, update_collection, is_down=True)  # [n, 2, 2, 1024]
-            # print(inputs)
             inputs = relu(inputs)
-            print(inputs)  # [n, 2, 2, 1024]
+            print(inputs)  # [n, 4, 4, 512]
             inputs = global_sum_pooling(inputs)  # [n, 1024]
             for i in range(0, nums_class - 1):
                 if i == 0:
