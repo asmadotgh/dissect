@@ -118,7 +118,7 @@ def train():
         DecoderX = DecoderX_64
         DecoderY = DecoderY_64
 
-    elif dataset == 'CelebA64' or dataset == 'dermatology':
+    elif dataset == 'CelebA64' or dataset == 'dermatology' or dataset == 'synthderm':
         pretrained_classifier = celeba_classifier
         my_data_loader = ImageLabelLoader(input_size=64)
         EncoderZ = EncoderZ_64

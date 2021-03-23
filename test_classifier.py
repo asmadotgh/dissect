@@ -54,7 +54,7 @@ def test(config):
     elif dataset == 'shapes':
         pretrained_classifier = shapes_classifier
         my_data_loader = ShapesLoader()
-    elif dataset == 'CelebA64' or dataset == 'dermatology':
+    elif dataset == 'CelebA64' or dataset == 'dermatology' or dataset == 'synthderm':
         pretrained_classifier = celeba_classifier
         my_data_loader = ImageLabelLoader(input_size=64)
     # ============= Data =============

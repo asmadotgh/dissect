@@ -346,6 +346,21 @@ def prep_dermatology(target_label='inflammatory-malignant'):
         save_processed_label_file(inflammatory_df[['image_path', 'type']], dermatology_dir, target_label)
 
 
+def prep_synthderm():
+    target_label = 'malignant'
+    synthderm_dir = os.path.join('data', 'synthderm')
+    image_dir = os.path.join(synthderm_dir, 'images')
+    file_name = '{}_binary_classification.txt'.format(target_label)
+
+    # Divide dataset into train and test set
+    _, file_names_dict = read_data_file(os.path.join(synthderm_dir, file_name))
+    all_images = list(file_names_dict.keys())
+
+    dataset_split(all_images, os.path.join(synthderm_dir, target_label))
+
+    print("Number of images: ", len(file_names_dict.keys()))
+
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument('--celeba', '-c', action='store_true')
@@ -355,6 +370,7 @@ if __name__ == "__main__":
     parser.add_argument('--shapes_biased', '-sb', action='store_true')
     parser.add_argument('--cub', '-cub', action='store_true')
     parser.add_argument('--dermatology', '-d', action='store_true')
+    parser.add_argument('--synthderm', '-sd', action='store_true')
     args = parser.parse_args()
     if args.shapes:
         prep_shapes()
@@ -370,3 +386,5 @@ if __name__ == "__main__":
         prep_cub()
     if args.dermatology:
         prep_dermatology()
+    if args.synthderm:
+        prep_synthderm()
