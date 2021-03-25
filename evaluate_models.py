@@ -118,7 +118,7 @@ def calc_distinct(results_dict):
     # ============= placeholder =============
     with tf.name_scope('input'):
         x_ = tf.placeholder(tf.float32, [None, input_size, input_size, channels*2], name='x-input')
-        y = tf.placeholder(tf.float32, [None, 2], name='y-input')
+        y = tf.placeholder(tf.float32, [None, N_KNOBS], name='y-input')
         isTrain = tf.placeholder(tf.bool)
     # ============= Model =============
     logit, prediction = classifier_distinct_64(x_, num_dims=N_KNOBS, isTrain=isTrain)
