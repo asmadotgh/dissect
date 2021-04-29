@@ -124,11 +124,7 @@ def test(config, dbg_img_label_dict=None, dbg_mode=False, export_output=True, db
         DecoderX = DecoderX_128
         DecoderY = DecoderY_128
     elif dataset == 'shapes':
-        if dbg_mode:
-            my_data_loader = ShapesLoader(dbg_mode=True, dbg_size=dbg_size,
-                                          dbg_image_label_dict=image_label_dict,
-                                          dbg_img_indices=dbg_img_indices)
-        elif calc_substitutability:
+        if calc_substitutability:
             my_data_loader = ShapesLoader()
         else:
             # my_data_loader = ShapesLoader()
