@@ -419,6 +419,10 @@ def calc_stability(results_dict, config):
         _x = np.repeat(np.expand_dims(x, axis=ax), rep, axis=ax)
         return np.mean((inverse_image(_x)-inverse_image(y))**2)
 
+    def _mean_abs_diff(x, y, rep=num_randoms, ax=1):
+        _x = np.repeat(np.expand_dims(x, axis=ax), rep, axis=ax)
+        return np.mean(np.absolute(inverse_image(_x)-inverse_image(y)))
+
     def _my_reshape(inp):
         # inp [num_samples, num_randoms, generation_dim, bins, num_classification]
         # inp_reshaped [num_classification, num_samples * num_randoms * generation_dim * bins]
@@ -445,13 +449,18 @@ def calc_stability(results_dict, config):
 
     mse_fake_t_img = _mean_sq_diff(results_dict['fake_t_imgs'], results_dict['stability_fake_t_imgs'])
     mse_fake_s_recon_img = _mean_sq_diff(results_dict['fake_s_recon_imgs'], results_dict['stability_fake_s_recon_imgs'])
+
+    mae_fake_t_img = _mean_abs_diff(results_dict['fake_t_imgs'], results_dict['stability_fake_t_imgs'])
+    mae_fake_s_recon_img = _mean_abs_diff(results_dict['fake_s_recon_imgs'],
+                                          results_dict['stability_fake_s_recon_imgs'])
+
     jsd_recon_p = _jsd(results_dict['recon_ps'], results_dict['stability_recon_ps'])
     jsd_fake_p = _jsd(results_dict['fake_ps'], results_dict['stability_fake_ps'])
 
-    print('Stability - mse_fake_t_img: {:.3f}, mse_fake_s_recon_img: {:.3f}, jsd_recon_p: {:.3f}, jsd_fake_p:{:.3f}'.format(
-        mse_fake_t_img, mse_fake_s_recon_img, jsd_recon_p, jsd_fake_p))
+    print('Stability - mse_fake_t_img: {:.3f}, mse_fake_s_recon_img: {:.3f}, mae_fake_t_img: {:.3f}, mae_fake_s_recon_img: {:.3f}, jsd_fake_p: {:.3f}, jsd_recon_p: {:.3f}'.format(
+        mse_fake_t_img, mse_fake_s_recon_img, mae_fake_t_img, mae_fake_s_recon_img, jsd_fake_p, jsd_recon_p))
     metrics_dict = {}
-    for metric in ['mse_fake_t_img', 'mse_fake_s_recon_img', 'jsd_recon_p', 'jsd_fake_p']:
+    for metric in ['mse_fake_t_img', 'mse_fake_s_recon_img', 'mae_fake_t_img', 'mae_fake_s_recon_img', 'jsd_fake_p', 'jsd_recon_p']:
         metrics_dict.update({'stability_{}'.format(metric): [eval(metric)]})
 
     print('Metrics successfully calculated: Stability')
