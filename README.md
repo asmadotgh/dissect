@@ -1,3 +1,8 @@
+# DISSECT
+TensorFlow Implementation of [DISSECT: Disentangled Simultaneous Explanations via Concept Traversals](https://arxiv.org/abs/TBD).
+
+This code is inspired by and built off of "Explanation by Progressive Exaggeration" ([code](https://github.com/batmanlab/Explanation_by_Progressive_Exaggeration), [paper](https://openreview.net/forum?id=H1xFWgrFPS)).
+
 ## Installation
 ```bash
 $ pip install -r requirements.txt
@@ -87,3 +92,17 @@ python train_csvae.py --config 'configs/csvae_experiments/celeba64_biased_or_csv
 ```
 python evaluate_models.py --config '[any explainer or discoverer config]'
 ```
+
+## Reference
+If you use this code or the released SynthDerm dataset, please reference [the following paper](https://arxiv.org/abs/TBD):
+```
+@article{ghandeharioun2021dissect,
+  title={DISSECT: Disentangled Simultaneous Explanations via Concept Traversals},
+  author={Ghandeharioun, Asma and Kim, Been and Li, Chun-Liang and Jou, Brendan and Eoff, Brian and Picard, Rosalind},
+  journal={arXiv preprint arXiv:TBD},
+  year={2021}
+}
+```
+
+### Related Work
+* Singla, S., Pollack, B., Chen, J., & Batmanghelich, K. (2019, September). [Explanation by Progressive Exaggeration](https://openreview.net/forum?id=H1xFWgrFPS). In International Conference on Learning Representations.
