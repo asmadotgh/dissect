@@ -1,5 +1,0 @@
-export LD_LIBRARY_PATH=/usr/data/joramas/Downloads/CUDA8/var/cuda-repo-8-0-local-ga2/usr/local/cuda-8.0/lib64
-export LD_PRELOAD=/usr/lib64/libstdc++.so.6
-export CUDA_CACHE_MAXSIZE=1536870912
-ulimit -v 32000000
- 
