@@ -48,7 +48,7 @@ python test_classifier.py --config 'configs/synthderm_experiments/synthderm_mali
 python test_classifier.py --config 'configs/celeba64_biased_experiments/celebA_biased_Classifier.yaml' --n_bins=10
 ```
 
-4. Train discoverer model. The output is saved at: $log_dir$/$name$.
+4. Train DISSECT discoverer model. The output is saved at: $log_dir$/$name$.
 
 ```
 python train_discoverer.py --config 'configs/redcyan_experiments/shapes_redcyan_Discoverer_multidim.yaml'
@@ -88,7 +88,7 @@ python train_csvae.py --config 'configs/csvae_experiments/synthderm_malignant_cs
 python train_csvae.py --config 'configs/csvae_experiments/celeba64_biased_or_csvae_multidim.yaml'
 ```
 
-6. Save results of the trained Discoverer model for quantitative experiments and calculate evaluation metrics on it.
+6. Save results of the trained Discoverer/Explainer/CSVAE model for quantitative experiments and calculate evaluation metrics on it.
 ```
 python evaluate_models.py --config '[any explainer or discoverer config]'
 ```
