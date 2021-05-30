@@ -172,9 +172,7 @@ def test(config, dbg_img_label_dict=None, dbg_mode=False, export_output=True, db
     G = Generator_Encoder_Decoder("generator")  # with conditional BN, SAGAN: SN here as well
     D = Discriminator_Ordinal("discriminator")  # with SN and projection
 
-    # TODO AG, currently D only conditions on delta, but not the "knob" index.
     real_source_logits = D(x_source, y_s, NUMS_CLASS, "NO_OPS")
-    # TODO AG, currently G conditions on a one-hot vector of size NUMS_CLASS * k_dim. Make it more efficient?
     if disentangle:
         fake_target_img, fake_target_img_embedding = G(x_source,
                                                        y_regularizer * NUMS_CLASS + y_target,

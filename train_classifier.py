@@ -95,7 +95,7 @@ def train(config_path, overwrite_output_dir=None):
         logit, prediction = pretrained_classifier(x_, n_label=N_CLASSES, reuse=False, name='classifier',
                                                   isTrain=isTrain)
         y = y_
-    classif_loss = tf.losses.sigmoid_cross_entropy(multi_class_labels=y, logits=logit) # TODO use softmax for binary classification
+    classif_loss = tf.losses.sigmoid_cross_entropy(multi_class_labels=y, logits=logit)
     classif_acc = calc_accuracy(prediction=prediction, labels=y)
     loss = tf.losses.get_total_loss()
     # ============= Optimization functions =============    

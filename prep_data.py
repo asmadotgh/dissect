@@ -296,12 +296,6 @@ def prep_shapes_biased():
     save_processed_label_file(shape_labels_df, shapes_biased_dir, target_label)
 
 
-def prep_cub():
-    # TODO reshape all images
-    # pick a label
-    return
-
-
 def prep_dermatology(target_label='inflammatory-malignant'):
     dermatology_dir = os.path.join('data', 'dermatology')
     df = pd.read_csv(os.path.join(dermatology_dir, 'skindictionary.csv'))
@@ -368,7 +362,6 @@ if __name__ == "__main__":
     parser.add_argument('--celeba_biased', '-cb', action='store_true')
     parser.add_argument('--celeba_biased_or', '-cbo', action='store_true')
     parser.add_argument('--shapes_biased', '-sb', action='store_true')
-    parser.add_argument('--cub', '-cub', action='store_true')
     parser.add_argument('--dermatology', '-d', action='store_true')
     parser.add_argument('--synthderm', '-sd', action='store_true')
     args = parser.parse_args()
@@ -382,8 +375,6 @@ if __name__ == "__main__":
         prep_celeba_biased()
     if args.celeba_biased_or:
         prep_celeba_biased_or()
-    if args.cub:
-        prep_cub()
     if args.dermatology:
         prep_dermatology()
     if args.synthderm:

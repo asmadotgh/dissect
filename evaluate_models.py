@@ -352,8 +352,6 @@ def calc_realistic(results_dict, config):
     for metric in ['accuracy', 'precision', 'recall']:
         metrics_dict.update({'realistic_{}'.format(metric): [eval(metric)]})
 
-    # TODO: Add FID between real images and explanations in the future
-
     print('Metrics successfully calculated: Realistic')
     return metrics_dict
 

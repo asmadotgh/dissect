@@ -46,3 +46,32 @@ def pretrained_classifier(inputae, n_label, reuse, name='classifier', isTrain=Fa
         prediction = tf.nn.sigmoid(logit)
         # pred_y = tf.argmax(prediction, 1)
         return logit, prediction
+
+
+def biased_pretrained_classifier(inputae, n_label, reuse, name='classifier', isTrain=False):
+    print(name, isTrain)
+    with tf.variable_scope(name) as scope:
+        if reuse:
+            tf.get_variable_scope().reuse_variables()
+        else:
+            assert tf.get_variable_scope().reuse is False
+
+        # input: [n, 64, 64, 3]
+        print(inputae)
+        mask = tf.zeros_like(input)
+        mask[:, 0:21, 42:64, :] = 1
+        inputae = tf.tensordot(inputae, mask)
+        inputs = tf.layers.flatten(inputae)
+        print(inputs)
+        inputs = dense_layer(inputs, 32, isTrain, 'SCBlock1')  # [n, 32]
+        print(inputs)
+        inputs = dense_layer(inputs, 32, isTrain, 'SCBlock2')  # [n, 32]
+        print(inputs)
+        logit = dense_layer(inputs, n_label, isTrain, 'SCBlock3')  # [n, n_label]
+        print(logit)
+        if isTrain == False:
+            # print(isTrain)
+            logit = tf.stop_gradient(logit)
+        prediction = tf.nn.sigmoid(logit)
+        # pred_y = tf.argmax(prediction, 1)
+        return logit, prediction

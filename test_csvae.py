@@ -262,21 +262,11 @@ def test(config, dbg_img_label_dict=None, dbg_mode=False, export_output=True, db
         stability_recon_ps = np.empty([num_samples, metrics_stability_nx, generation_dim, NUMS_CLASS, NUMS_CLASS_cls])
         stability_fake_ps = np.empty([num_samples, metrics_stability_nx, generation_dim, NUMS_CLASS, NUMS_CLASS_cls])
 
-        # TODO: can later save embeddings if needed
-        # fake_t_embeds_z = np.empty([num_samples, generation_dim, NUMS_CLASS, z_dim])
-        # fake_t_embeds_w = np.empty([num_samples, generation_dim, NUMS_CLASS, w_dim])
-        # fake_s_embeds_z = np.empty([num_samples, generation_dim, NUMS_CLASS, z_dim])
-        # fake_s_embeds_w = np.empty([num_samples, generation_dim, NUMS_CLASS, w_dim])
-        # s_embeds_z = np.empty([num_samples, generation_dim, NUMS_CLASS, z_dim])
-        # s_embeds_w = np.empty([num_samples, generation_dim, NUMS_CLASS, w_dim])
-
         arrs_to_save = [
             'names', 'real_imgs', 'fake_t_imgs', 'fake_s_recon_imgs',
             'real_ps', 'recon_ps', 'fake_target_ps', 'fake_ps',
             'stability_fake_t_imgs', 'stability_fake_s_recon_imgs', 'stability_recon_ps', 'stability_fake_ps'
         ]
-        # TODO: can later save embeddings if needed
-        # , 's_embeds_z', 's_embeds_w', 'fake_s_embeds_z', 'fake_s_embeds_w', 'fake_t_embeds_z', 'fake_t_embeds_w']
 
     np.random.shuffle(data)
 
@@ -353,14 +343,6 @@ def test(config, dbg_img_label_dict=None, dbg_mode=False, export_output=True, db
             recon_ps[start_ind: end_ind] = np.reshape(recon_p, (_num_cur_samples, generation_dim, NUMS_CLASS, NUMS_CLASS_cls))
             fake_target_ps[start_ind: end_ind] = np.reshape(fake_target_p, (_num_cur_samples, generation_dim, NUMS_CLASS))
             fake_ps[start_ind: end_ind] = np.reshape(fake_p, (_num_cur_samples, generation_dim, NUMS_CLASS, NUMS_CLASS_cls))
-
-            # TODO: can later save embeddings if needed
-            # fake_t_embeds_z[start_ind: end_ind] = np.reshape(fake_t_embeds_z, (_num_cur_samples, generation_dim, NUMS_CLASS, z_dim))
-            # fake_t_embeds_w[start_ind: end_ind] = np.reshape(fake_t_embeds_w, (_num_cur_samples, generation_dim, NUMS_CLASS, w_dim))
-            # fake_s_embeds_z[start_ind: end_ind] = np.reshape(fake_s_embeds_z, (_num_cur_samples, generation_dim, NUMS_CLASS, z_dim))
-            # fake_s_embeds_w[start_ind: end_ind] = np.reshape(fake_s_embeds_w, (_num_cur_samples, generation_dim, NUMS_CLASS, w_dim))
-            # s_embeds_z[start_ind: end_ind] = np.reshape(s_embeds_z, (_num_cur_samples, generation_dim, NUMS_CLASS, z_dim))
-            # s_embeds_w[start_ind : end_ind] = np.reshape(s_embeds_w, (_num_cur_samples, generation_dim, NUMS_CLASS, w_dim))
 
     output_dict = {}
     if calc_substitutability:
