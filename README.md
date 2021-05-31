@@ -105,4 +105,4 @@ If you use this code or the released SynthDerm dataset, please reference [the fo
 ```
 
 ### Related Work
-* Singla, S., Pollack, B., Chen, J., & Batmanghelich, K. (2019, September). [Explanation by Progressive Exaggeration](https://openreview.net/forum?id=H1xFWgrFPS). In International Conference on Learning Representations.
+* Singla, S., Pollack, B., Chen, J., & Batmanghelich, K. (2020, September). [Explanation by Progressive Exaggeration](https://openreview.net/forum?id=H1xFWgrFPS). In International Conference on Learning Representations.
