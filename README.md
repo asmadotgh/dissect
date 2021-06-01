@@ -1,5 +1,5 @@
 # DISSECT
-TensorFlow Implementation of [DISSECT: Disentangled Simultaneous Explanations via Concept Traversals](https://arxiv.org/abs/TBD).
+TensorFlow Implementation of [DISSECT: Disentangled Simultaneous Explanations via Concept Traversals](https://arxiv.org/abs/2105.15164).
 
 This code is inspired by and built off of "Explanation by Progressive Exaggeration" ([code](https://github.com/batmanlab/Explanation_by_Progressive_Exaggeration), [paper](https://openreview.net/forum?id=H1xFWgrFPS)).
 
@@ -94,12 +94,12 @@ python evaluate_models.py --config '[any explainer or discoverer config]'
 ```
 
 ## Reference
-If you use this code or the released SynthDerm dataset, please reference [the following paper](https://arxiv.org/abs/TBD):
+If you use this code or the released SynthDerm dataset, please reference [the following paper](https://arxiv.org/abs/2105.15164):
 ```
 @article{ghandeharioun2021dissect,
   title={DISSECT: Disentangled Simultaneous Explanations via Concept Traversals},
   author={Ghandeharioun, Asma and Kim, Been and Li, Chun-Liang and Jou, Brendan and Eoff, Brian and Picard, Rosalind},
-  journal={arXiv preprint arXiv:TBD},
+  journal={arXiv preprint arXiv:2105.15164},
   year={2021}
 }
 ```
