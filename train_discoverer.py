@@ -16,6 +16,18 @@ from explainer.networks_64 import Discriminator_Ordinal as Discriminator_Ordinal
 from explainer.networks_64 import Generator_Encoder_Decoder as Generator_Encoder_Decoder_64
 from explainer.networks_64 import Discriminator_Contrastive as Discriminator_Contrastive_64
 
+from explainer.networks_64_s import Discriminator_Ordinal as Discriminator_Ordinal_64_s
+from explainer.networks_64_s import Generator_Encoder_Decoder as Generator_Encoder_Decoder_64_s
+from explainer.networks_64_s import Discriminator_Contrastive as Discriminator_Contrastive_64_s
+
+from explainer.networks_64_xs import Discriminator_Ordinal as Discriminator_Ordinal_64_xs
+from explainer.networks_64_xs import Generator_Encoder_Decoder as Generator_Encoder_Decoder_64_xs
+from explainer.networks_64_xs import Discriminator_Contrastive as Discriminator_Contrastive_64_xs
+
+from explainer.networks_64_xxs import Discriminator_Ordinal as Discriminator_Ordinal_64_xxs
+from explainer.networks_64_xxs import Generator_Encoder_Decoder as Generator_Encoder_Decoder_64_xxs
+from explainer.networks_64_xxs import Discriminator_Contrastive as Discriminator_Contrastive_64_xxs
+
 import tensorflow.contrib.slim as slim
 import tensorflow as tf
 import numpy as np
@@ -102,9 +114,25 @@ def train():
                                           dbg_image_label_dict=config['image_label_dict'])
         else:
             my_data_loader = ShapesLoader()
+
         Discriminator_Ordinal = Discriminator_Ordinal_64
         Generator_Encoder_Decoder = Generator_Encoder_Decoder_64
         Discriminator_Contrastive = Discriminator_Contrastive_64
+
+        if 'GAN_size' in config.keys():
+            if config['GAN_size'] == 's':
+                Discriminator_Ordinal = Discriminator_Ordinal_64_s
+                Generator_Encoder_Decoder = Generator_Encoder_Decoder_64_s
+                Discriminator_Contrastive = Discriminator_Contrastive_64_s
+            elif config['GAN_size'] == 'xs':
+                Discriminator_Ordinal = Discriminator_Ordinal_64_xs
+                Generator_Encoder_Decoder = Generator_Encoder_Decoder_64_xs
+                Discriminator_Contrastive = Discriminator_Contrastive_64_xs
+            elif config['GAN_size'] == 'xxs':
+                Discriminator_Ordinal = Discriminator_Ordinal_64_xxs
+                Generator_Encoder_Decoder = Generator_Encoder_Decoder_64_xxs
+                Discriminator_Contrastive = Discriminator_Contrastive_64_xxs
+
     elif dataset == 'CelebA64' or dataset == 'dermatology':
         pretrained_classifier = celeba_classifier
         my_data_loader = ImageLabelLoader(input_size=64)

@@ -16,6 +16,18 @@ from explainer.networks_64 import Discriminator_Ordinal as Discriminator_Ordinal
 from explainer.networks_64 import Generator_Encoder_Decoder as Generator_Encoder_Decoder_64
 from explainer.networks_64 import get_embedding_size as embedding_size_64
 
+from explainer.networks_64_s import Discriminator_Ordinal as Discriminator_Ordinal_64_s
+from explainer.networks_64_s import Generator_Encoder_Decoder as Generator_Encoder_Decoder_64_s
+from explainer.networks_64_s import get_embedding_size as embedding_size_64_s
+
+from explainer.networks_64_xs import Discriminator_Ordinal as Discriminator_Ordinal_64_xs
+from explainer.networks_64_xs import Generator_Encoder_Decoder as Generator_Encoder_Decoder_64_xs
+from explainer.networks_64_xs import get_embedding_size as embedding_size_64_xs
+
+from explainer.networks_64_xxs import Discriminator_Ordinal as Discriminator_Ordinal_64_xxs
+from explainer.networks_64_xxs import Generator_Encoder_Decoder as Generator_Encoder_Decoder_64_xxs
+from explainer.networks_64_xxs import get_embedding_size as embedding_size_64_xxs
+
 import tensorflow.contrib.slim as slim
 from utils import *
 from losses import *
@@ -120,6 +132,20 @@ def test(config, dbg_img_label_dict=None, dbg_mode=False, export_output=True, db
         pretrained_classifier = shapes_classifier
         Discriminator_Ordinal = Discriminator_Ordinal_64
         Generator_Encoder_Decoder = Generator_Encoder_Decoder_64
+
+        if 'GAN_size' in config.keys():
+            if config['GAN_size'] == 's':
+                EMBEDDING_SIZE = embedding_size_64_s()
+                Discriminator_Ordinal = Discriminator_Ordinal_64_s
+                Generator_Encoder_Decoder = Generator_Encoder_Decoder_64_s
+            elif config['GAN_size'] == 'xs':
+                EMBEDDING_SIZE = embedding_size_64_xs()
+                Discriminator_Ordinal = Discriminator_Ordinal_64_xs
+                Generator_Encoder_Decoder = Generator_Encoder_Decoder_64_xs
+            elif config['GAN_size'] == 'xxs':
+                EMBEDDING_SIZE = embedding_size_64_xxs()
+                Discriminator_Ordinal = Discriminator_Ordinal_64_xxs
+                Generator_Encoder_Decoder = Generator_Encoder_Decoder_64_xxs
     elif dataset == 'CelebA64' or dataset == 'dermatology':
         my_data_loader = ImageLabelLoader(input_size=64)
         EMBEDDING_SIZE = embedding_size_64()
