@@ -605,6 +605,7 @@ if __name__ == "__main__":
     parser.add_argument('--stability', '-stab', action='store_true')
     parser.add_argument('--influential', '-infl', action='store_true')
     parser.add_argument('--generalization', '-gen', action='store_true')
+    parser.add_argument('--distinctness', '-dist', action='store_true')
 
     parser.add_argument('--influential_per_concept', '-inflpc', action='store_true')
     parser.add_argument('--generalization_per_concept', '-genpc', action='store_true')
@@ -616,41 +617,49 @@ if __name__ == "__main__":
     out_dir = os.path.join(config['log_dir'], config['name'], 'test')
     metrics_dir = os.path.join(out_dir, 'metrics')
 
+    if os.path.exists(os.path.join(metrics_dir, 'metrics.csv')):
+        metrics_dict = pd.read_csv(os.path.join(metrics_dir, 'metrics.csv'), index_col=0).iloc[0].to_dict()
+    else:
+        metrics_dict = {}
+
     # Calculating aggregated metrics
     if args.generalization:
-        metrics_dict = pd.read_csv(os.path.join(metrics_dir, 'metrics.csv'), index_col=0).iloc[0].to_dict()
         results_dict = get_results_from_file(out_dir, files_to_load=['fake_target_ps', 'fake_ps'])
         generalization_dict = calc_generalization(results_dict)
         metrics_dict.update(generalization_dict)
         _save_csv(metrics_dir, metrics_dict)
 
     if args.influential:
-        metrics_dict = pd.read_csv(os.path.join(metrics_dir, 'metrics.csv'), index_col=0).iloc[0].to_dict()
         results_dict = get_results_from_file(out_dir, files_to_load=['fake_target_ps', 'fake_ps'])
         influential_dict = calc_influential(results_dict, config['target_class'])
         metrics_dict.update(influential_dict)
         _save_csv(metrics_dir, metrics_dict)
 
     if args.substitutability:
-        metrics_dict = pd.read_csv(os.path.join(metrics_dir, 'metrics.csv'), index_col=0).iloc[0].to_dict()
         substitutability_dict = calc_substitutability(config)
         metrics_dict.update(substitutability_dict)
         _save_csv(metrics_dir, metrics_dict)
 
     if args.realistic:
-        metrics_dict = pd.read_csv(os.path.join(metrics_dir, 'metrics.csv'), index_col=0).iloc[0].to_dict()
         results_dict = get_results_from_file(out_dir, files_to_load=['real_imgs', 'fake_t_imgs'])
         realistic_dict = calc_realistic(results_dict, config)
         metrics_dict.update(realistic_dict)
         _save_csv(metrics_dir, metrics_dict)
 
     if args.stability:
-        metrics_dict = pd.read_csv(os.path.join(metrics_dir, 'metrics.csv'), index_col=0).iloc[0].to_dict()
         results_dict = get_results_from_file(out_dir, files_to_load=[
             'fake_t_imgs', 'fake_s_recon_imgs', 'recon_ps', 'fake_ps',
             'stability_fake_t_imgs', 'stability_fake_s_recon_imgs', 'stability_recon_ps', 'stability_fake_ps'])
         stability_dict = calc_stability(results_dict, config)
         metrics_dict.update(stability_dict)
+        _save_csv(metrics_dir, metrics_dict)
+
+    if args.distinctness:
+        results_dict = get_results_from_file(out_dir, files_to_load=[
+            'real_imgs', 'fake_t_imgs', 'real_ps',  'fake_target_ps'
+            ])
+        distinct_dict = calc_distinct(results_dict, config)
+        metrics_dict.update(distinct_dict)
         _save_csv(metrics_dir, metrics_dict)
 
     # Calculating metrics for individual concepts
