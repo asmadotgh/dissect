@@ -38,6 +38,65 @@ def _save_csv(out_dir, out_dict):
     metrics_df.to_csv(os.path.join(out_dir, 'metrics.csv'))
 
 
+def calc_influential_per_concept(results_dict, target_class):
+    print('Calculating metrics for: Influential_per_concept')
+    metrics_dict = {}
+    # np.shape(results_dict['fake_target_ps']): [num_samples, generation_dim, NUMS_CLASS]
+    # np.shape(results_dict['fake_ps']): [num_samples, generation_dim, NUMS_CLASS, NUMS_CLASS_cls]
+    num_concepts = np.shape(results_dict['fake_ps'])[1]
+    for concept in np.arange(num_concepts):
+        p = results_dict['fake_target_ps'][:, concept, :].flatten()
+        q = results_dict['fake_ps'][:, concept, :, target_class].flatten()
+        MSE = mean_squared_error(p, q)
+        pearson_r, pearson_p = pearsonr(p, q)
+        spearman_r, spearman_p = spearmanr(p, q)
+
+        # KL divergence is infinite if there exists an x where p(x)>0 and q(x)=0
+        kl_p = np.zeros((len(p), 2))
+        kl_q = np.zeros((len(p), 2))
+        kl_p[:, 1] = results_dict['fake_target_ps'][:, concept, :].flatten()
+        kl_p[:, 0] = 1.0 - kl_p[:, 1]
+        kl_q[:, 0] = results_dict['fake_ps'][:, concept, :, 0].flatten()
+        kl_q[:, 1] = results_dict['fake_ps'][:, concept, :, 1].flatten()
+        KL = np.nanmean(entropy(kl_p, kl_q, axis=1))
+
+        print(
+            'Influential - concept #{} - MSE: {:.3f}, KL: {:.3f}, pearson_r: {:.3f}, pearson_p: {:.3f}, '
+            'spearman_r: {:.3f}, spearman_p:{:.3f}'.format(concept,
+                MSE, KL, pearson_r, pearson_p, spearman_r, spearman_p))
+
+        for metric in ['MSE', 'KL', 'pearson_r', 'pearson_p', 'spearman_r', 'spearman_p']:
+            metrics_dict.update({'influential_per_concept_{}_{}'.format(concept, metric): [eval(metric)]})
+    print('Metrics successfully calculated: Influential_per_concept')
+
+    return metrics_dict
+
+
+def calc_generalization_per_concept(results_dict):
+    # This calculates performance of the pretrained classifier on generated images (instead of the original test set)
+    print('Calculating metrics for: Generalization_per_concept')
+    metrics_dict = {}
+
+    num_concepts = np.shape(results_dict['fake_ps'])[1]
+    for concept in np.arange(num_concepts):
+        concept_fake_target_ps = results_dict['fake_target_ps'][:, concept, :]
+        concept_fake_ps = results_dict['fake_ps'][:, concept, :, :]
+
+        sub_inds = np.logical_or(concept_fake_target_ps == 0.0, concept_fake_target_ps == 1.)
+        labels = 1 * (concept_fake_target_ps[sub_inds] > 0.5)
+        pred = concept_fake_ps[sub_inds]
+
+        accuracy, precision, recall = calc_metrics_arr(np.argmax(pred, axis=1), labels)
+
+        print('Generalization - concept #{} - accuracy: {:.3f}, precision: {:.3f}, recall: {:.3f}'.format(
+            concept, accuracy, precision, recall))
+        for metric in ['accuracy', 'precision', 'recall']:
+            metrics_dict.update({'generalization_per_concept_{}_{}'.format(concept, metric): [eval(metric)]})
+
+    print('Metrics successfully calculated: Generalization_per_concept')
+    return metrics_dict
+
+
 def calc_influential(results_dict, target_class):
     print('Calculating metrics for: Influential')
     p = results_dict['fake_target_ps'].flatten()
@@ -546,6 +605,9 @@ if __name__ == "__main__":
     parser.add_argument('--stability', '-stab', action='store_true')
     parser.add_argument('--influential', '-infl', action='store_true')
     parser.add_argument('--generalization', '-gen', action='store_true')
+
+    parser.add_argument('--influential_per_concept', '-inflpc', action='store_true')
+    parser.add_argument('--generalization_per_concept', '-genpc', action='store_true')
     args = parser.parse_args()
 
     config = yaml.load(open(args.config))
@@ -554,6 +616,7 @@ if __name__ == "__main__":
     out_dir = os.path.join(config['log_dir'], config['name'], 'test')
     metrics_dir = os.path.join(out_dir, 'metrics')
 
+    # Calculating aggregated metrics
     if args.generalization:
         metrics_dict = pd.read_csv(os.path.join(metrics_dir, 'metrics.csv'), index_col=0).iloc[0].to_dict()
         results_dict = get_results_from_file(out_dir, files_to_load=['fake_target_ps', 'fake_ps'])
@@ -588,6 +651,21 @@ if __name__ == "__main__":
             'stability_fake_t_imgs', 'stability_fake_s_recon_imgs', 'stability_recon_ps', 'stability_fake_ps'])
         stability_dict = calc_stability(results_dict, config)
         metrics_dict.update(stability_dict)
+        _save_csv(metrics_dir, metrics_dict)
+
+    # Calculating metrics for individual concepts
+    if args.influential_per_concept:
+        metrics_dict = pd.read_csv(os.path.join(metrics_dir, 'metrics.csv'), index_col=0).iloc[0].to_dict()
+        results_dict = get_results_from_file(out_dir, files_to_load=['fake_target_ps', 'fake_ps'])
+        influential_dict = calc_influential_per_concept(results_dict, config['target_class'])
+        metrics_dict.update(influential_dict)
+        _save_csv(metrics_dir, metrics_dict)
+
+    if args.generalization_per_concept:
+        metrics_dict = pd.read_csv(os.path.join(metrics_dir, 'metrics.csv'), index_col=0).iloc[0].to_dict()
+        results_dict = get_results_from_file(out_dir, files_to_load=['fake_target_ps', 'fake_ps'])
+        generalization_dict = calc_generalization_per_concept(results_dict)
+        metrics_dict.update(generalization_dict)
         _save_csv(metrics_dir, metrics_dict)
 
     if not args.skip_eval:
