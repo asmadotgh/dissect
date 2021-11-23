@@ -21,12 +21,12 @@ class Generator_Encoder_Decoder:
             print("Encoder-Decoder")
             print(inputs)
             inputs = relu(conditional_batchnorm(inputs, "GBN1"))
-            embedding = conv("Gconv1", inputs, k_size=1, nums_out=4, strides=1)  # [n, 64, 64, 4]
+            embedding = conv("Gconv1", inputs, k_size=3, nums_out=4, strides=1)  # [n, 64, 64, 4]
 
             print(':', embedding)
 
             inputs = relu(conditional_batchnorm(embedding, "GBN"))
-            inputs = conv("Gconv", inputs, k_size=1, nums_out=num_channel, strides=1)  # [n, 64, 64, 3]
+            inputs = conv("Gconv", inputs, k_size=3, nums_out=num_channel, strides=1)  # [n, 64, 64, 3]
             print(':', inputs)
         return tf.nn.tanh(inputs), embedding
 
@@ -42,7 +42,7 @@ class Discriminator_Ordinal:
             # input: [n, 64, 64, 3]
             print(inputs)
             inputs = relu(conditional_batchnorm(inputs, "DBN1"))
-            inputs = conv("Dconv1", inputs, k_size=1, nums_out=4, strides=1)  # [n, 64, 64, 4]
+            inputs = conv("Dconv1", inputs, k_size=3, nums_out=4, strides=1)  # [n, 64, 64, 4]
             print(inputs)
             inputs = global_sum_pooling(inputs)  # [n, 4]
             inputs = dense("Ddense", inputs, 1, update_collection, is_sn=False)  # [n, 1]
