@@ -17,6 +17,9 @@ import math
 from test_classifier import test as test_classif
 from test_classifier import get_prediction_from_file
 
+from tensorflow.python.ops import array_ops
+import functools
+
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 np.random.seed(0)
 
@@ -36,6 +39,65 @@ def _save_csv(out_dir, out_dict):
         os.makedirs(out_dir)
     metrics_df = pd.DataFrame.from_dict(out_dict)
     metrics_df.to_csv(os.path.join(out_dir, 'metrics.csv'))
+
+
+def calc_FID(results_dict):
+    tfgan = tf.contrib.gan
+    session=tf.InteractiveSession()
+    BATCH_SIZE = 64
+    inception_images = tf.placeholder(tf.float32, [None, None, None, 3])
+    activations1 = tf.placeholder(tf.float32, [None, None], name='activations1')
+    activations2 = tf.placeholder(tf.float32, [None, None], name='activations2')
+    fcd = tfgan.eval.frechet_classifier_distance_from_activations(activations1, activations2)
+
+    def inception_activations(images=inception_images, num_splits = 1):
+        #images = tf.transpose(images, [0, 2, 3, 1])
+        size = 299
+        images = tf.image.resize_bilinear(images, [size, size])
+        generated_images_list = array_ops.split(images, num_or_size_splits=num_splits)
+        activations = tf.map_fn(
+            fn=functools.partial(tfgan.eval.run_inception, output_tensor='pool_3:0'),
+            elems=array_ops.stack(generated_images_list),
+            parallel_iterations=1,
+            back_prop=False,
+            swap_memory=True,
+            name='RunClassifier')
+        activations = array_ops.concat(array_ops.unstack(activations), 0)
+        return activations
+
+    activations = inception_activations()
+
+    def get_inception_activations(inps):
+        n_batches = int(np.ceil(float(inps.shape[0]) / BATCH_SIZE))
+        act = np.zeros([inps.shape[0], 2048], dtype=np.float32)
+        for i in range(n_batches):
+            inp = inps[i * BATCH_SIZE: (i + 1) * BATCH_SIZE]
+            if inp.shape[3] != 3:
+                inp = np.tile(inp, [1, 1, 1, 3])
+            act[i * BATCH_SIZE: i * BATCH_SIZE + min(BATCH_SIZE, inp.shape[0])] = session.run(
+                activations, feed_dict={inception_images: inp})
+        return act
+
+    real_imgs = results_dict['real_imgs']
+    fake_imgs = results_dict['fake_t_imgs']
+
+    batch_size = np.shape(fake_imgs)[0]
+    num_concepts = np.shape(fake_imgs)[1]
+    num_bins = np.shape(fake_imgs)[2]
+    concept_id = np.random.randint(low=0, high=num_concepts, size=batch_size)
+    bin_id = np.random.randint(low=0, high=1, size=batch_size) * (num_bins-1)
+    fake_imgs_sub = np.zeros_like(real_imgs)
+    for i in np.arange(batch_size):
+        fake_imgs_sub[i] = fake_imgs[i, concept_id[i], bin_id[i]]
+
+    act1 = get_inception_activations(real_imgs)
+    print(act1.shape)
+    act2 = get_inception_activations(fake_imgs_sub)
+    print(act2.shape)
+    fid = session.run(fcd, feed_dict={activations1: act1, activations2: act2})
+    print("FID: ", fid)
+    metrics_dict = {'FID': [fid]}
+    return metrics_dict
 
 
 def calc_influential_per_concept(results_dict, target_class):
@@ -606,6 +668,7 @@ if __name__ == "__main__":
     parser.add_argument('--influential', '-infl', action='store_true')
     parser.add_argument('--generalization', '-gen', action='store_true')
     parser.add_argument('--distinctness', '-dist', action='store_true')
+    parser.add_argument('--fid', '-fid', action='store_true')
 
     parser.add_argument('--influential_per_concept', '-inflpc', action='store_true')
     parser.add_argument('--generalization_per_concept', '-genpc', action='store_true')
@@ -623,6 +686,22 @@ if __name__ == "__main__":
         metrics_dict = {}
 
     # Calculating aggregated metrics
+    if args.fid:
+        results_dict = get_results_from_file(out_dir, files_to_load=[
+            'real_imgs', 'fake_t_imgs',
+        ])
+        fid_dict = calc_FID(results_dict)
+        metrics_dict.update(fid_dict)
+        _save_csv(metrics_dir, metrics_dict)
+
+    if args.distinctness:
+        results_dict = get_results_from_file(out_dir, files_to_load=[
+            'real_imgs', 'fake_t_imgs', 'real_ps',  'fake_target_ps'
+            ])
+        distinct_dict = calc_distinct(results_dict, config)
+        metrics_dict.update(distinct_dict)
+        _save_csv(metrics_dir, metrics_dict)
+
     if args.generalization:
         results_dict = get_results_from_file(out_dir, files_to_load=['fake_target_ps', 'fake_ps'])
         generalization_dict = calc_generalization(results_dict)
@@ -652,14 +731,6 @@ if __name__ == "__main__":
             'stability_fake_t_imgs', 'stability_fake_s_recon_imgs', 'stability_recon_ps', 'stability_fake_ps'])
         stability_dict = calc_stability(results_dict, config)
         metrics_dict.update(stability_dict)
-        _save_csv(metrics_dir, metrics_dict)
-
-    if args.distinctness:
-        results_dict = get_results_from_file(out_dir, files_to_load=[
-            'real_imgs', 'fake_t_imgs', 'real_ps',  'fake_target_ps'
-            ])
-        distinct_dict = calc_distinct(results_dict, config)
-        metrics_dict.update(distinct_dict)
         _save_csv(metrics_dir, metrics_dict)
 
     # Calculating metrics for individual concepts
