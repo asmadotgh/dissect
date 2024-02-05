@@ -14,7 +14,7 @@ python setup.py develop
 ```
 
 ## Usage
-1. Download the [**CelebA**](https://www.kaggle.com/jessicali9530/celeba-dataset), [**3D Shapes**](https://github.com/deepmind/3d-shapes), and the newly generated [**SynthDerm**](https://affect.media.mit.edu/dissect/synthderm) dataset. Create train and test folders for the classifier.  
+1. Download the [**CelebA**](https://www.kaggle.com/jessicali9530/celeba-dataset), [**3D Shapes**](https://github.com/deepmind/3d-shapes), and the newly generated [**SynthDerm**](https://mitmedialabaffectivecomputing.github.io/SynthDermDataset) dataset. Create train and test folders for the classifier.  
 
 If you already have them downloaded, it is easier to just run:
 ```
